@@ -1,4 +1,6 @@
+boto3
 faiss-cpu
+numpy
 tiktoken
 openai
 python-dotenv
