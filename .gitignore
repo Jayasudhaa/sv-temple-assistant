@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+package-lock.json
+
+# Data & logs
+data_raw/
+logs/
+
+# OS / Editor
+.DS_Store
+*.tmp
+
+# PDFs or large files
+*.pdf
+
+# Secrets
+.env
+*.env
