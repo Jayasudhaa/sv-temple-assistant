@@ -1,7 +1,0 @@
-# data_raw/contact.txt
-CONTACT
-Temple: 303 660 9555
-Manager: 303 898 5514
-Email: manager@svtempleco.org
-Address: 1495 South Ridge Road, Castle Rock, CO 80104
-Website: www.svtempleco.org

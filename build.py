@@ -1,71 +1,94 @@
-# build_tiny.py — READS .txt AND .pdf FROM data_raw/
-import os, json, faiss
-from backend.embeddings import embed
+import os
+import json
+from pathlib import Path
+import boto3
+import numpy as np
+import faiss
 
-# PDF SUPPORT
-try:
-    import PyPDF2
-    HAS_PDF = True
-    print("PyPDF2 loaded — PDF support ON")
-except:
-    HAS_PDF = False
-    print("PyPDF2 not found — PDF support OFF (run: pip install PyPDF2)")
+DATA_DIR = Path("data_raw")
+FAISS_DIR = Path("backend/faiss_store")
+FAISS_DIR.mkdir(parents=True, exist_ok=True)
 
-INPUT = "data_raw"
-OUT = "backend/faiss_store"
-os.makedirs(OUT, exist_ok=True)
+bedrock = boto3.client("bedrock-runtime", region_name="us-east-1")
 
-texts = []
-meta = []
+# -------- LOAD + CHUNK TXT FILES (RECURSIVE) ----------
+def load_all_text_chunks():
+    chunks = []
+    sources = []
 
-print("Scanning data_raw for .txt and .pdf files...")
-for file in sorted(os.listdir(INPUT)):
-    path = os.path.join(INPUT, file)
-    raw = ""
-
-    # --- READ .txt ---
-    if file.lower().endswith(".txt"):
-        raw = open(path, "r", encoding="utf-8").read()
-
-    # --- READ .pdf ---
-    elif file.lower().endswith(".pdf") and HAS_PDF:
-        try:
-            with open(path, "rb") as f:
-                reader = PyPDF2.PdfReader(f)
-                raw = "\n".join(page.extract_text() or "" for page in reader.pages)
-            print(f"Extracted {len(raw)} chars from PDF: {file}")
-        except Exception as e:
-            print(f"PDF error {file}: {e}")
+    # Recursively read ALL .txt files in data_raw
+    for file in DATA_DIR.rglob("*.txt"):
+        text = file.read_text(encoding="utf-8", errors="ignore").strip()
+        if not text:
             continue
 
-    if not raw.strip():
-        continue
+        # Simple chunking: by blank line
+        parts = [p.strip() for p in text.split("\n") if p.strip()]
 
-    # --- CHUNK TEXT (500-char chunks) ---
-    chunks = [raw[i:i+600] for i in range(0, len(raw), 500)]
-    for i, c in enumerate(chunks):
-        texts.append(c)
-        meta.append({
-            "source": file,
-            "chunk_id": i,
-            "text": c
-        })
+        for p in parts:
+            if len(p) > 10:  # discard very short noise lines
+                chunks.append(p)
+                sources.append(str(file))
 
-print(f"Found {len(texts)} chunks from {len([f for f in os.listdir(INPUT) if f.endswith(('.txt','.pdf'))])} files")
+    return chunks, sources
 
-# --- EMBED ---
-print("Embedding...")
-vecs = embed(texts)
 
-# --- BUILD FAISS ---
-print("Building FAISS index...")
-index = faiss.IndexFlatIP(vecs.shape[1])
-index.add(vecs)
+# ---------- EMBEDDINGS -------------
+def embed_bedrock(text_list):
+    body = {
+        "texts": text_list,
+        "input_type": "search_document"
+    }
 
-# --- SAVE ---
-print("Saving index.faiss + meta.json...")
-faiss.write_index(index, os.path.join(OUT, "index.faiss"))
-json.dump({"meta": meta}, open(os.path.join(OUT, "meta.json"), "w"), indent=2)
+    resp = bedrock.invoke_model(
+        modelId="cohere.embed-english-v3",
+        body=json.dumps(body),
+        contentType="application/json"
+    )
 
-print("DONE! meta.json updated with ALL .txt and .pdf files.")
-print("Run: Compress-Archive -Path app.py,requirements.txt,backend,data_raw -DestinationPath BOT.zip -Force")
+    data = json.loads(resp["body"].read())
+    return data["embeddings"]
+
+
+# ---------- BUILD INDEX -------------
+def build_index():
+    print("Loading and chunking text…")
+    chunks, sources = load_all_text_chunks()
+    print("Total chunks:", len(chunks))
+
+    if len(chunks) == 0:
+        raise Exception("❌ No chunks found! Check your data_raw/ folder structure.")
+
+    # embed in batches
+    vectors = []
+    batch_size = 32
+
+    print("Embedding chunks with Bedrock…")
+    for i in range(0, len(chunks), batch_size):
+        batch = chunks[i:i+batch_size]
+        embeds = embed_bedrock(batch)
+        vectors.extend(embeds)
+
+    vectors = np.array(vectors, dtype="float32")
+    dim = vectors.shape[1]
+
+    # FAISS index
+    index = faiss.IndexFlatL2(dim)
+    index.add(vectors)
+
+    print("Saving FAISS index…")
+    faiss.write_index(index, str(FAISS_DIR / "index.faiss"))
+
+    print("Saving metadata…")
+    meta = []
+    for i, text in enumerate(chunks):
+        meta.append({"id": i, "source": sources[i], "text": text})
+
+    with open(FAISS_DIR / "meta.json", "w", encoding="utf-8") as f:
+        json.dump({"meta": meta}, f, indent=2)
+
+    print("🎉 DONE — FAISS index built successfully!")
+
+
+if __name__ == "__main__":
+    build_index()
