@@ -1,0 +1,12 @@
+# data_raw/contact.txt
+Temple timings:
+Weekday (Monday-Friday ) 9AM -12 Noon and 6PM- 8PM
+Weekends(Saturday ,Sunday) and Holidays 9AM- 6PM
+The Time Zone is Based on Denver , Mountain Time Zone
+
+CONTACT
+Temple: 303 660 9555
+Manager: 303 898 5514
+Email: manager@svtempleco.org
+Address: 1495 South Ridge Road, Castle Rock, CO 80104
+Website: www.svtempleco.org
