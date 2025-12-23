@@ -26,16 +26,7 @@ ITEMS_REQUIRED = {
         "note": "Temple can provide most items for standard poojas"
     },
 
-    "vahana": {
-        "name": "Vahana Pooja (Vehicle Blessing)",
-        "items": """• Lemons
-• 1 Coconut
-• Fruits
-• Flowers""",
-        "note": "Walk-ins welcome subject to priest availability"
-    },
-
-    "satyanarayana_pooja_temple": {
+    "satyanarayana_temple": {
         "name": "Satyanarayana Swamy Pooja at Temple",
         "items": """• Flowers - 3 Bunches
 • Fruits - 3 varieties
@@ -512,7 +503,7 @@ TEMPLE_INFO = {
     
     # TEMPLE COMMITTEES
     "committees": {
-        "annapoorna": "Annapoorna Committee - Smt. Swetha Sarvabhotla (Chair) - 537-462-6167",
+        "annapoorna": "Annapoorna Committee - Smt. Swetha Sarvabhotla (Chair)",
         "religious": "Religious Committee - Sri. Raju Dandu (Chair)",
         "finance": "Finance Committee - Sri. Dileep Kumar Kadirimangalam (Chair)",
         "executive": "Executive Committee - Sri. Satyanarayana Velagapudi (President)",
@@ -654,10 +645,36 @@ def _format_bullets(raw: str) -> str:
 # This ensures "Om Namo Venkatesaya" only appears on the first interaction.
 
 def handle_food_query(q: str, now: datetime) -> str | None:
-    """Unified Annadanam / Cafeteria / Prasadam logic"""
+    """Unified Annadanam / Cafeteria / Prasadam / Catering logic"""
     day = now.strftime("%A")
     is_weekend = _is_weekend(now)
 
+    # --------------------------------------------------
+    # 1. CATERING / ANNADANAM SPONSORSHIP / COMMITTEE
+    # --------------------------------------------------
+    if any(w in q for w in [
+        "annadanam sponsor",
+        "annadanam sponsorship",
+        "sponsor annadanam",
+        "catering",
+        "catering service",
+        "catering contact",
+        "annapoorna",
+        "annapurna",
+        "food sponsorship"
+    ]):
+        return (
+        "🍽️ ANNADANAM & CATERING SERVICES\n\n"
+        "• For Annadanam sponsorship or catering services, please contact:\n"
+        f"• {TEMPLE_INFO['contacts']['catering']}\n\n"
+        "• Catering services are coordinated through the Annapoorna Committee\n"
+        "• Advance notice is required for sponsorships and large events"
+    )
+
+
+    # --------------------------------------------------
+    # 2. DINNER (EXPLICITLY NOT AVAILABLE)
+    # --------------------------------------------------
     if "dinner" in q:
         return (
             "• Dinner service is not available at the temple\n"
@@ -665,6 +682,9 @@ def handle_food_query(q: str, now: datetime) -> str | None:
             "• Serving time: 12:00 PM – 2:00 PM (Weekends only)"
         )
 
+    # --------------------------------------------------
+    # 3. PRASADAM
+    # --------------------------------------------------
     if "prasadam" in q:
         return (
             "• Prasadam is available during temple poojas\n"
@@ -672,6 +692,9 @@ def handle_food_query(q: str, now: datetime) -> str | None:
             f"• Contact: {TEMPLE_INFO['phone']}"
         )
 
+    # --------------------------------------------------
+    # 4. REGULAR ANNADANAM / CAFETERIA / LUNCH
+    # --------------------------------------------------
     if any(w in q for w in ["annadanam", "cafeteria", "food", "lunch", "meal"]):
         if is_weekend:
             return (
@@ -688,6 +711,7 @@ def handle_food_query(q: str, now: datetime) -> str | None:
         )
 
     return None
+
 
 # ============================================================
 # HOMAMS DATA (FROM ARJITHA SEVA)
@@ -719,17 +743,6 @@ HOMAMS_DATA = {
         "saamoohika": {"sudarsana": "$116"}
     }
 }
-
-STORY_INTENT_MAP = [
-    ("varalakshmi vratham", "Rituals/Varalakshmi_Vratham.txt"),
-    ("varalakshmi", "Rituals/Varalakshmi_Vratham.txt"),
-    ("guru poornima", "Rituals/Guru_Poornima.txt"),
-    ("mahalakshmi jayanthi", "Rituals/Mahalakshmi_Jayanthi.txt"),
-    ("mahalakshmi jayanti", "Rituals/Mahalakshmi_Jayanthi.txt"),
-    ("diwali", "Rituals/story_of_Diwali.txt"),
-    ("deepavali", "Rituals/story_of_Diwali.txt"),
-]
-
 
 def homam_list_response() -> str:
     lines = ["🪔 HOMAMS PERFORMED AT THE TEMPLE:\n"]
@@ -850,74 +863,78 @@ def answer_user(query, user_id=None):
         sessions_seen.add(user_id)
 
     out = handle_food_query(q, now)
+
     if out:
         return f"{greeting}{out}\n"
     
-    if (out is None and any(word in q for word in ["open", "close", "timing", "hours"])
-        and not any(w in q for w in ["food", "cafeteria", "annadanam", "prasadam","panchang", "tithi", "nakshatra", "star"])
-       ):
 
-        current_hour = now.hour
-        is_weekend_day = _is_weekend(now)
-        day_name = now.strftime("%A")
+    # --------------------------------------------------------
+    # ARJITHA SEVA — EXPLANATION, LIST & BOOKING
+    # --------------------------------------------------------
+    if out is None and "arjitha" in q:
 
-        if "today" in q:
-            if is_weekend_day:
-                 if current_hour < 9:
-                     out = (
-                        f"• The temple opens today at 9:00 AM ({day_name})\n"
-                        f"• Weekend hours: 9:00 AM - 8:00 PM"
-                    )
-                 elif current_hour < 20:
-                     out = (
-                        f"• Yes, the temple is open right now\n"
-                        f"• Today’s hours ({day_name}): 9:00 AM - 8:00 PM"
-                     )
-                 else:
-                      out = (
-                        f"• The temple is closed for today ({day_name})\n"
-                        f"• Tomorrow opens at 9:00 AM"
-                     )
-            else:
-                 if current_hour < 9:
-                       out = (
-                        f"• The temple opens today at 9:00 AM ({day_name})\n"
-                        f"• Weekday hours: 9:00 AM - 12:00 PM, 6:00 PM - 8:00 PM"
-                     )
-                 elif current_hour < 12:
-                        out = (
-                        f"• Yes, the temple is open right now\n"
-                        f"• Morning session until 12:00 PM"
-                     )
-                 elif current_hour < 18:
-                        out = (
-                        f"• The temple is closed now\n"
-                        f"• Reopens at 6:00 PM"
-                    )
-                 elif current_hour < 20:
-                        out = (
-                        f"• Yes, the temple is open right now\n"
-                        f"• Evening session until 8:00 PM"
-                    )
-                 else:
-                        out = (
-                        f"• The temple is closed for today ({day_name})\n"
-                        f"• Tomorrow opens at 9:00 AM"
-                    )
-        else:
-             out = (
-            "🕉️ TEMPLE HOURS\n\n"
-            "📅 WEEKDAYS (Mon–Fri):\n"
-            "• 9:00 AM – 12:00 PM\n"
-            "• 6:00 PM – 8:00 PM\n\n"
-            "📅 WEEKENDS & HOLIDAYS:\n"
-            "• 9:00 AM – 8:00 PM\n\n"
-            "🍽️ CAFETERIA (Annadanam):\n"
-            "• Saturday & Sunday: 12:00 PM – 2:00 PM"
+        # 1️⃣ EXPLANATION
+        if any(w in q for w in ["what is", "explain", "meaning"]):
+            out = (
+                "Om Namo Venkateshaya Namah 🙏\n\n"
+                "• Arjitha Seva refers to special religious services performed by temple priests "
+                "for individual devotees upon request.\n"
+                "• These sevas can be performed at the temple or at home (by prior booking).\n"
+                "• Arjitha Sevas include Abhishekam, Archana, Homam, Vrathams, "
+                "and important life-event ceremonies (Samskaras).\n\n"
+                "📞 For booking & availability:\n"
+                f"• Phone: {TEMPLE_INFO['phone']}\n"
+                f"• Email: {TEMPLE_INFO['email']}"
             )
+            return f"{greeting}{out}\n"
 
-  
-            
+        # 2️⃣ LIST OF ARJITHA SEVAS
+        if any(w in q for w in ["list", "types", "available"]):
+            out = (
+                "Om Namo Venkateshaya Namah 🙏\n\n"
+                "🪔 ARJITHA SEVAS AVAILABLE\n\n"
+                "• Abhishekam (monthly temple schedule)\n"
+                "• Archana & Sahasranama Archana\n"
+                "• Homams (Sudarsana, Lakshmi, Ganapathi, Nava Graha, etc.)\n"
+                "• Vrathams (Satyanarayana, Varalakshmi, etc.)\n"
+                "• Life-event ceremonies (Samskaras):\n"
+                "  – Namakaranam, Annaprasana, Aksharabhyasam\n"
+                "  – Mundan (Hair offering), Seemantham\n"
+                "  – Gruhapravesam, Vastu & Bhoomi Pooja\n"
+                "  – Nischitartham, Hindu Wedding\n"
+                "  – Shastiabdapoorthi, Bheemaratha Shanti\n"
+                "  – Hiranya Shraddham\n\n"
+                "📞 For details & scheduling:\n"
+                f"• Phone: {TEMPLE_INFO['phone']}"
+            )
+            return f"{greeting}{out}\n"
+
+        # 3️⃣ WHEN / HOW TO PLACE (BOOKING)
+        if any(w in q for w in ["when", "how", "book", "place", "schedule"]):
+            out = (
+                "Om Namo Venkateshaya Namah 🙏\n\n"
+                "🪔 HOW TO PLACE ARJITHA SEVA\n\n"
+                "• Decide the seva type (Abhishekam, Homam, Vratham, or life event)\n"
+                "• Choose temple or home (where applicable)\n"
+                "• Contact the temple to confirm date & priest availability\n"
+                "• Book at least 1–3 weeks in advance for life events & homams\n"
+                "• Bring required pooja items on the day of the seva\n\n"
+                "📞 Booking Contact:\n"
+                f"• Phone: {TEMPLE_INFO['phone']}\n"
+                f"• Email: {TEMPLE_INFO['email']}"
+            )
+            return f"{greeting}{out}\n"
+
+        # 4️⃣ DEFAULT (SHORT SUMMARY)
+        out = (
+            "Om Namo Venkateshaya Namah 🙏\n\n"
+            "• Arjitha Seva is a special priest-performed seva for individual devotees.\n"
+            "• Available by prior booking at the temple or at home.\n\n"
+            "📞 For details:\n"
+            f"• Phone: {TEMPLE_INFO['phone']}"
+        )
+        return f"{greeting}{out}\n"
+
     # --------------------------------------------------------
     # 2. ADDRESS & LOCATION
     # --------------------------------------------------------
@@ -927,6 +944,110 @@ def answer_user(query, user_id=None):
             f"• Website: {TEMPLE_INFO['website']}"
         )
 
+    # --------------------------------------------------------
+    # TEMPLE HOURS / OPEN / CLOSE (FIXED & SAFE)
+    # --------------------------------------------------------
+    if (
+        out is None
+        and any(word in q for word in [
+            "open", "close", "closing", "closing time",
+            "when does it close", "timing", "hours"
+        ])
+        and not any(w in q for w in [
+            "address", "location", "where is",
+            "food", "cafeteria", "annadanam", "prasadam",
+            "panchang", "tithi", "nakshatra", "star",
+            "contact", "phone", "email"
+        ])
+    ):
+
+        current_hour = now.hour
+        is_weekend_day = _is_weekend(now)
+        day_name = now.strftime("%A")
+
+        # --------------------------------------------------
+        # 1️⃣ CLOSING TIME — HIGHEST PRIORITY
+        # --------------------------------------------------
+        if any(w in q for w in ["close", "closing", "closing time", "when does it close"]):
+
+            if is_weekend_day:
+                out = "• The temple closes today at 8:00 PM"
+            else:
+                if current_hour < 12:
+                    out = "• The temple closes today at 12:00 PM (reopens at 6:00 PM)"
+                elif current_hour < 18:
+                    out = "• The temple reopens at 6:00 PM and closes at 8:00 PM"
+                else:
+                    out = "• The temple closes today at 8:00 PM"
+
+            return f"{greeting}{out}\n"
+
+        # --------------------------------------------------
+        # 2️⃣ OPEN / TODAY STATUS
+        # --------------------------------------------------
+        if "today" in q or "open" in q:
+
+            if is_weekend_day:
+                if current_hour < 9:
+                    out = (
+                        f"• The temple opens today at 9:00 AM ({day_name})\n"
+                        f"• Weekend hours: 9:00 AM – 8:00 PM"
+                    )
+                elif current_hour < 20:
+                    out = (
+                        "• Yes, the temple is open right now\n"
+                        "• Today’s hours: 9:00 AM – 8:00 PM"
+                    )
+                else:
+                    out = (
+                        f"• The temple is closed for today ({day_name})\n"
+                        "• Tomorrow opens at 9:00 AM"
+                    )
+            else:
+                if current_hour < 9:
+                    out = (
+                        f"• The temple opens today at 9:00 AM ({day_name})\n"
+                        "• Weekday hours: 9:00 AM – 12:00 PM, 6:00 PM – 8:00 PM"
+                    )
+                elif current_hour < 12:
+                    out = (
+                        "• Yes, the temple is open right now\n"
+                        "• Morning session until 12:00 PM"
+                    )
+                elif current_hour < 18:
+                    out = (
+                        "• The temple is closed now\n"
+                        "• Reopens at 6:00 PM"
+                    )
+                elif current_hour < 20:
+                    out = (
+                        "• Yes, the temple is open right now\n"
+                        "• Evening session until 8:00 PM"
+                    )
+                else:
+                    out = (
+                        f"• The temple is closed for today ({day_name})\n"
+                        "• Tomorrow opens at 9:00 AM"
+                    )
+
+        # --------------------------------------------------
+        # 3️⃣ GENERIC HOURS (ONLY IF ASKED)
+        # --------------------------------------------------
+        if out is None:
+            out = (
+                "🕉️ TEMPLE HOURS\n\n"
+                "📅 WEEKDAYS (Mon–Fri):\n"
+                "• 9:00 AM – 12:00 PM\n"
+                "• 6:00 PM – 8:00 PM\n\n"
+                "📅 WEEKENDS & HOLIDAYS:\n"
+                "• 9:00 AM – 8:00 PM\n\n"
+                "🍽️ CAFETERIA (Annadanam):\n"
+                "• Saturday & Sunday: 12:00 PM – 2:00 PM"
+            )
+
+    
+            
+   
     # --------------------------------------------------------
     # 3. CONVERSATIONAL: "What's happening today/at temple?"
     # --------------------------------------------------------  
@@ -990,11 +1111,13 @@ def answer_user(query, user_id=None):
         day_of_week = now.strftime("%A").lower()
         week_of_month = (now.day - 1) // 7 + 1
         
-        for key, schedule in WEEKLY_EVENTS.items():
-            if any(keyword in key for keyword in [f"{week_of_month}st", f"{week_of_month}nd", f"{week_of_month}rd", f"{week_of_month}th"]):
-                if day_of_week in key:
-                    today_info.append(f"\n🪔 ABHISHEKAM TODAY:")
-                    today_info.append(f"• {schedule}")
+        for schedule in WEEKLY_EVENTS.values():
+            if f"{week_of_month}" in schedule:
+                today_info.append("\n🪔 ABHISHEKAM TODAY:")
+                today_info.append(f"• {schedule}")
+                break
+        
+
         
         out = "\n".join(today_info)
 
@@ -1037,8 +1160,11 @@ def answer_user(query, user_id=None):
         
         # Specific committee queries
         elif any(word in q for word in ["catering", "food", "annapurna", "annapoorna"]):
-            out = f"• {TEMPLE_INFO['committees']['annapoorna']}\n• For catering services, contact: Smt. Swetha Sarvabhotla at 537-462-6167"
-        
+            out = (
+                f"• {TEMPLE_INFO['committees']['annapoorna']}\n"
+                f"• {TEMPLE_INFO['contacts']['catering']}\n\n"
+            )
+
         elif any(word in q for word in ["religious", "pooja", "ritual"]):
             out = f"• {TEMPLE_INFO['committees']['religious']}"
         
@@ -1327,8 +1453,18 @@ def answer_user(query, user_id=None):
     # 11. ABHISHEKAM SCHEDULES (only if asking "when")
     # --------------------------------------------------------
     if out is None and ("abhishekam" in q or "kalyanam" in q) and any(word in q for word in ["when", "what time", "schedule"]):
-    
-    # Special formatting for Venkateswara Kalyanam
+
+        # Special case: Mahalakshmi Ammavaru Abhishekam
+        if "mahalakshmi" in q or "maha lakshmi" in q:
+            out = (
+                "Om Namo Venkateshaya Namah\n\n"
+                "• Third Saturday - 11:00 AM – Sri Mahalakshmi Abhishekam (Moola Murthy)\n"
+                "• Abhishekam Sponsorship is $116\n"
+                "• You can offer Vastram for Mahalakshmi Ammavaru.\n"
+                "  Sponsorship $301 – Vastram provided by temple and includes Abhishekam sponsorship also"
+            )
+
+        # Special formatting for Venkateswara Kalyanam
         if "kalyanam" in q and "venkateswara" in q:
             out = (
                 "🪔 SRI VENKATESWARA SWAMY KALYANAM\n\n"
@@ -1340,6 +1476,7 @@ def answer_user(query, user_id=None):
                 "  (Temple provides Vastram for Venkateswara Swamy & Ammavaru)\n\n"
                 "📞 Contact Manager: 303-898-5514"
             )
+
         else:
             # Existing logic for other abhishekams
             for keyword, schedule in WEEKLY_EVENTS.items():
@@ -1347,65 +1484,28 @@ def answer_user(query, user_id=None):
                     out = f"• {schedule}"
                     break
 
-
-  
-
+# --------------------------------------------------------
+# SUDARSHANA / ABHISHEKAM SCHEDULE OVERRIDE
+# --------------------------------------------------------
+# --------------------------------------------------------
+# SUDARSHANA / ABHISHEKAM SCHEDULE OVERRIDE
+# --------------------------------------------------------
+    if out is None and "sudarshana" in q and any(w in q for w in ["when", "schedule", "time"]):
+        out = (
+            "• Fourth Sunday - 11:00 AM – Sri Sudarshana Homam\n"
+            "• Saamoohika sponsorship available\n"
+            "• Contact temple for booking"
+        )
 
 
 # --------------------------------------------------------
 # HOMAM INTENT HANDLING
 # --------------------------------------------------------
-# --------------------------------------------------------
-# HOMAMS: LIST & COST (ARJITHA SEVA)
-# --------------------------------------------------------
     if out is None and "homam" in q:
-
-         # ---- LIST OF HOMAMS ----
         if any(w in q for w in ["list", "types", "available"]):
-             lines = ["🪔 HOMAMS PERFORMED AT THE TEMPLE:\n"]
-             for h in HOMAMS_DATA["list"]:
-                lines.append(f"• {h}")
-
-                lines.append("\n📞 For booking and details:")
-                lines.append("• Phone: 303-898-5514")
-                lines.append("• Email: manager@svtempleco.org")
-
-                out = "\n".join(lines)
-
-                # ---- HOMAM COST / SPONSORSHIP ----
-        elif any(w in q for w in ["cost", "price", "how much", "sponsorship"]):
-                p = HOMAMS_DATA["pricing"]
-
-                if "ayush" in q:
-                 out = (
-                     "🪔 AYUSH HOMAM – SPONSORSHIP\n\n"
-                      f"• At Temple: {p['ayush']['temple']}\n"
-                      f"• At Home: {p['ayush']['home']}\n\n"
-                  "📞 Contact: 303-898-5514"
-                 )
-
-                elif "chandi" in q:
-                    out = (
-                        "🪔 CHANDI HOMAM – SPONSORSHIP\n\n"
-                        f"• At Temple: {p['chandi']['temple']}\n"
-                        f"• At Home: {p['chandi']['home']}\n\n"
-                        "📞 Contact: 303-898-5514"
-                    )
-
-                elif "saamoohika" in q or "group" in q:
-                    out = (
-                        "🪔 SAAMOOHIKA SUDARSANA HOMAM\n\n"
-                        f"• Sponsorship per family: {p['saamoohika']['sudarsana']}\n\n"
-                        "📞 Contact: 303-898-5514"
-                    )
-
-                else:
-                    out = (
-                        "🪔 INDIVIDUAL HOMAM – SPONSORSHIP\n\n"
-                        f"• At Temple: {p['individual']['temple']}\n"
-                        f"• At Home: {p['individual']['home']}\n\n"
-                        "📞 Contact: 303-898-5514"
-                    )
+            out = homam_list_response()
+        else:
+            out = homam_cost_response(q)
 
 # --------------------------------------------------------
 # CULTURAL / SINGING / DANCE / BHAJAN / PERFORMANCE
@@ -1477,7 +1577,7 @@ def answer_user(query, user_id=None):
                 break
         
         # If no month specified and query is about dates, use current month
-        is_date_query = any(word in q for word in ["full moon", "purnima", "amavasya", "ekadasi", "ekadashi", "new moon" "pournami"])
+        is_date_query = any(word in q for word in ["full moon", "purnima", "amavasya", "ekadasi", "ekadashi", "new moon", "pournami"])
         if not specified_month and is_date_query:
             specified_month = now.strftime("%B").lower()
         
@@ -1580,7 +1680,7 @@ Answer:"""
                         result = json.loads(response['body'].read())
                         llm_answer = result['content'][0]['text'].strip()
                         
-                        out = llm_answer
+                        out = _sanitize(llm_answer)
                         
                     except Exception as llm_error:
                         print(f"LLM generation error: {llm_error}")

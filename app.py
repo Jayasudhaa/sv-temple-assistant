@@ -437,7 +437,10 @@ def handler(event, context):
 🙏 Namaste! Welcome to Sri Venkateswara Temple!
 📍 Location: 1495 South Ridge Road, Castle Rock, CO 80104
 📞 Phone: 303-898-5514 | Manager: 303-660-9555 🌐 www.svtempleco.org
-⏰ TEMPLE HOURS:Weekdays: 9 AM-12 PM, 6PM-8 PM,Weekends/Holidays: 9 AM-8 PM, Cafeteria: Sat-Sun 12 PM-2 PM
+⏰ TEMPLE HOURS:Weekdays: 9 AM-12 PM, 6PM-8 PM,Weekends/Holidays: 9 AM-8 PM, 
+Cafeteria: Sat-Sun 12 PM-2 PM
+
+Type "subscribe" and send for notifications
 
 📅 SCHEDULES & PANCHANG:
 • Daily Pooja (Suprabhata Seva, Nitya Archana),{current_month} Events & Festivals
@@ -450,16 +453,15 @@ def handler(event, context):
 • 4th Week: Hanuman (Sat), Sudarshana Homam (Sun)
 
 🛕 ITEMS REQUIRED:Vahana Pooja (Vehicle Blessing), Satyanarayana Vratam,Abhishekam, Homam, Archana
-💰 Sponsorship:• Individual Pooja pricing,Arjitha Seva details, Abhishekam & Homam costs,Vastram Samarpanam sponsorship
+💰 Sponsorship:• Individual Pooja,Arjitha Seva details, Abhishekam & Homam costs,Vastram Samarpanam
 
 👥 TEMPLE LEADERSHIP:
-• Chairman: Saiganesh Rajamani (303-941-4166), President: Sri. Satyanarayana Velagapudi,• Manager: Sri. Nandu Sankaran (303-898-5514)
+• Chairman: Saiganesh Rajamani (303-941-4166), President: Sri. Satyanarayana Velagapudi
+• Manager: Sri. Nandu Sankaran (303-898-5514)
 • Catering: Annapoorna Committee Chair: Smt. Swetha Sarvabhotla (537-462-6167)
 💬 EXAMPLE:"When is Hanuman Abhishekam?"
-Type "subscribe" and send for notifications
+
 🕉️ Om Namo Venkateshaya! 🕉️
-
-
 """
                 send_reply(sender, greeting)
                 return {"statusCode": 200}
