@@ -4,7 +4,8 @@ import os, json, re, boto3
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from .retrieval import get_chunks
-
+bedrock_runtime = boto3.client(service_name='bedrock-runtime', region_name='us-east-1')
+sessions_seen = set()
 # ============================================================
 # ITEMS REQUIRED FOR POOJAS (Complete Temple Website Data)
 # ============================================================
@@ -34,7 +35,7 @@ ITEMS_REQUIRED = {
         "note": "Walk-ins welcome subject to priest availability"
     },
 
-    "satyanarayana_temple": {
+    "satyanarayana_pooja_temple": {
         "name": "Satyanarayana Swamy Pooja at Temple",
         "items": """• Flowers - 3 Bunches
 • Fruits - 3 varieties
@@ -160,20 +161,6 @@ Contact temple for specific Vastu Shanti requirements""",
 • Navadhanyam - 1 Packet
 • Mango leaves garland - 1 No.""",
         "note": "Contact temple for specific homam requirements"
-    },
-
-    "abhishekam": {
-        "name": "Abhishekam Items",
-        "items": """• Milk (1-2 liters)
-• Yogurt (1 cup)
-• Honey (1 cup)
-• Ghee (1/4 cup)
-• Sugar or jaggery
-• Panchamritham ingredients
-• Sacred water
-• Flowers for decoration
-• Turmeric and kumkum""",
-        "note": "Check weekly abhishekam schedule"
     },
 
     "archana": {
@@ -503,6 +490,7 @@ IN ADDITION (if done at home):
 TEMPLE_INFO = {
     "address": "1495 South Ridge Road, Castle Rock, Colorado 80104",
     "phone": "303-898-5514",
+    "manager_phone" : "303-660-9555",
     "temple_main": "303-660-9555",
     "email": "manager@svtempleco.org",
     "website": "www.svtempleco.org",
@@ -555,50 +543,47 @@ MONTHLY_SCHEDULE = [
 
 WEEKLY_EVENTS = {
     # Week 1
-    "venkateswara swamy abhishekam": "1ST WEEK - Saturday 11:00 AM – Sri Venkateswara Swamy Abhishekam (Moola Murthy)",
-    "venkateswara abhishekam": "1ST WEEK - Saturday 11:00 AM – Sri Venkateswara Swamy Abhishekam (Moola Murthy)",
+    "venkateswara swamy abhishekam": "1st Saturday 11:00 AM – Sri Venkateswara Swamy Abhishekam (Moola Murthy), - Sponsorship: $151, - Vastram Option: $516 (includes Kalyanam + temple-provided Vastram), - Contact: 303-898-5514",
     "1st saturday": "11:00 AM – Sri Venkateswara Swamy Abhishekam (Moola Murthy)",
     "first saturday": "11:00 AM – Sri Venkateswara Swamy Abhishekam (Moola Murthy)",
     
-    "siva abhishekam": "1ST WEEK - Sunday 11:00 AM – Sri Siva Abhishekam",
-    "shiva abhishekam": "1ST WEEK - Sunday 11:00 AM – Sri Siva Abhishekam",
+    "siva abhishekam": "1st Sunday 11:00 AM – Sri Siva Abhishekam",
+    "shiva abhishekam": "1st Sunday 11:00 AM – Sri Siva Abhishekam",
     "1st sunday": "11:00 AM – Sri Siva Abhishekam",
     "first sunday": "11:00 AM – Sri Siva Abhishekam",
     
     # Week 2
-    "venkateswara swamy kalyanam": "2ND WEEK - Saturday 11:00 AM – Sri Venkateswara Swamy Kalyanam",
-    "kalyanam": "2ND WEEK - Saturday 11:00 AM – Sri Venkateswara Swamy Kalyanam",
-    "2nd saturday": "11:00 AM – Sri Venkateswara Swamy Kalyanam",
-    "second saturday": "11:00 AM – Sri Venkateswara Swamy Kalyanam",
+    "venkateswara swamy kalyanam": "2nd Saturday 11:00 AM – Sri Venkateswara Swamy Kalyanam , - Sponsorship: $151, - Vastram Option: $516 (includes Kalyanam + temple-provided Vastram), - Contact: 303-898-5514",
+     "2nd saturday": "11:00 AM – Sri Venkateswara Swamy Kalyanam , - Sponsorship: $151, - Vastram Option: $516 (includes Kalyanam + temple-provided Vastram), - Contact: 303-898-5514",
+    "second saturday": "11:00 AM – Sri Venkateswara Swamy Kalyanam , - Sponsorship: $151, - Vastram Option: $516 (includes Kalyanam + temple-provided Vastram), - Contact: 303-898-5514",
     
-    "vijaya ganapati": "2ND WEEK - Sunday 11:00 AM – Sri Vijaya Ganapati and Sri Valli Devasena Sahitha Murugan Abhishekam",
-    "ganapati abhishekam": "2ND WEEK - Sunday 11:00 AM – Sri Vijaya Ganapati and Sri Valli Devasena Sahitha Murugan Abhishekam",
-    "murugan abhishekam": "2ND WEEK - Sunday 11:00 AM – Sri Vijaya Ganapati and Sri Valli Devasena Sahitha Murugan Abhishekam",
+    "vijaya ganapati": "2nd Sunday 11:00 AM – Sri Vijaya Ganapati and Sri Valli Devasena Sahitha Murugan Abhishekam",
+    "ganapati abhishekam": "2nd Sunday 11:00 AM – Sri Vijaya Ganapati and Sri Valli Devasena Sahitha Murugan Abhishekam",
+    "murugan abhishekam": "2nd Sunday 11:00 AM – Sri Vijaya Ganapati and Sri Valli Devasena Sahitha Murugan Abhishekam",
     "2nd sunday": "11:00 AM – Sri Vijaya Ganapati and Sri Valli Devasena Sahitha Murugan Abhishekam",
     "second sunday": "11:00 AM – Sri Vijaya Ganapati and Sri Valli Devasena Sahitha Murugan Abhishekam",
     
     # Week 3
-    "andal abhishekam": "3RD WEEK - Friday 11:00 AM – Sri Andal Abhishekam (Moola Murthy)",
+    "andal abhishekam": "3rd Friday 11:00 AM – Sri Andal Abhishekam (Moola Murthy)",
     "3rd friday": "11:00 AM – Sri Andal Abhishekam (Moola Murthy)",
     "third friday": "11:00 AM – Sri Andal Abhishekam (Moola Murthy)",
     
-    "mahalakshmi abhishekam": "3RD WEEK - Saturday 11:00 AM – Sri Mahalakshmi Abhishekam (Moola Murthy)",
+    "mahalakshmi abhishekam": "3rd Saturday 11:00 AM – Sri Mahalakshmi Abhishekam (Moola Murthy)",
     "3rd saturday": "11:00 AM – Sri Mahalakshmi Abhishekam (Moola Murthy)",
     "third saturday": "11:00 AM – Sri Mahalakshmi Abhishekam (Moola Murthy)",
     
-    "shirdi sai baba": "3RD WEEK - Sunday 11:00 AM – Sri Shirdi Sai Baba and Sri Raghavendra Swamy Abhishekam",
-    "sai baba abhishekam": "3RD WEEK - Sunday 11:00 AM – Sri Shirdi Sai Baba and Sri Raghavendra Swamy Abhishekam",
-    "raghavendra swamy abhishekam": "3RD WEEK - Sunday 11:00 AM – Sri Shirdi Sai Baba and Sri Raghavendra Swamy Abhishekam",
-    "raghavendra abhishekam": "3RD WEEK - Sunday 11:00 AM – Sri Shirdi Sai Baba and Sri Raghavendra Swamy Abhishekam",
+    "shirdi sai baba": "3rd Sunday 11:00 AM – Sri Shirdi Sai Baba and Sri Raghavendra Swamy Abhishekam",
+    "sai baba abhishekam": "3rd Sunday 11:00 AM – Sri Shirdi Sai Baba and Sri Raghavendra Swamy Abhishekam",
+    "raghavendra swamy abhishekam": "3rd Sunday 11:00 AM – Sri Shirdi Sai Baba and Sri Raghavendra Swamy Abhishekam",
     "3rd sunday": "11:00 AM – Sri Shirdi Sai Baba and Sri Raghavendra Swamy Abhishekam",
     "third sunday": "11:00 AM – Sri Shirdi Sai Baba and Sri Raghavendra Swamy Abhishekam",
     
     # Week 4
-    "hanuman abhishekam": "4TH WEEK - Saturday 11:00 AM – Sri Hanuman Abhishekam",
+    "hanuman abhishekam": "4th Saturday 11:00 AM – Sri Hanuman Abhishekam",
     "4th saturday": "11:00 AM – Sri Hanuman Abhishekam",
     "fourth saturday": "11:00 AM – Sri Hanuman Abhishekam",
     
-    "sudarshana homam": "4TH WEEK - Sunday 11:00 AM – Sri Sudarshana Homam",
+    "sudarshana homam": "4th Sunday 11:00 AM – Sri Sudarshana Homam",
     "4th sunday": "11:00 AM – Sri Sudarshana Homam",
     "fourth sunday": "11:00 AM – Sri Sudarshana Homam"
 }
@@ -608,9 +593,13 @@ WEEKLY_EVENTS = {
 # ============================================================
 
 INSTRUCTIONS = {
-    "vahana_pooja": "Walk-ins are welcome subject to availability of priest. Bring: lemons, 1 coconut, fruits and flowers",
+    "vahana_pooja": "Walk-ins are welcome subject to availability of priest. Bring: 4 lemons, 1 coconut, fruits and flowers",
     "schedule_pooja": "Contact manager at 303-898-5514 or email manager@svtempleco.org",
-    "vastram_sponsor": "Contact manager at 303-898-5514 or email manager@svtempleco.org"
+    "vastra cost/sponsor": "Vastram Samarpanam (Offering New Clothes)\n\n"
+                     "• Sacred ritual of offering clothes to deities\n"
+                     "• Second Saturday Kalyanam ceremony (11:00 AM)\n"
+                     "• Sponsorship: $516 (includes Kalyanam + temple-provided Vastram)\n"
+                     "• Contact Manager: 303-898-5514"
 }
 
 # ============================================================
@@ -660,39 +649,279 @@ def _format_bullets(raw: str) -> str:
 # ============================================================
 # MAIN ANSWER FUNCTION
 # ============================================================
+# --- SESSION TRACKING ---
+# Global set to track users seen during the current Lambda execution context.
+# This ensures "Om Namo Venkatesaya" only appears on the first interaction.
 
-def answer_user(question: str) -> str:
+def handle_food_query(q: str, now: datetime) -> str | None:
+    """Unified Annadanam / Cafeteria / Prasadam logic"""
+    day = now.strftime("%A")
+    is_weekend = _is_weekend(now)
+
+    if "dinner" in q:
+        return (
+            "• Dinner service is not available at the temple\n"
+            "• Annadanam is served only during lunch hours\n"
+            "• Serving time: 12:00 PM – 2:00 PM (Weekends only)"
+        )
+
+    if "prasadam" in q:
+        return (
+            "• Prasadam is available during temple poojas\n"
+            "• Availability depends on the pooja schedule\n"
+            f"• Contact: {TEMPLE_INFO['phone']}"
+        )
+
+    if any(w in q for w in ["annadanam", "cafeteria", "food", "lunch", "meal"]):
+        if is_weekend:
+            return (
+                "• Annadanam (temple cafeteria) is available today\n"
+                "• Serving time: 12:00 PM – 2:00 PM\n"
+                "• Traditional vegetarian meals are served\n\n"
+                f"• Contact: {TEMPLE_INFO['phone']}"
+            )
+        return (
+            f"• Annadanam is not available today ({day})\n"
+            "• Served only on Saturdays & Sundays\n"
+            "• Timing: 12:00 PM – 2:00 PM\n\n"
+            f"• Contact: {TEMPLE_INFO['phone']}"
+        )
+
+    return None
+
+# ============================================================
+# HOMAMS DATA (FROM ARJITHA SEVA)
+# ============================================================
+
+HOMAMS_DATA = {
+    "list": [
+        "Sudarsana Homam",
+        "Lakshmi Homam",
+        "Venkateswara Homam",
+        "Ganapathi Homam",
+        "One Graha Homam",
+        "Udhaka Shanthi Homam",
+        "Ayush Homam",
+        "Chandi Homam",
+        "Durga Homam",
+        "Rudra Homam",
+        "Mrutyunjaya Homam",
+        "Lakshmi Hayagriva Homam",
+        "Lakshmi Narasimha Homam",
+        "Dhanvantari Homam",
+        "Saraswati Homam",
+        "Nava Graha Homam"
+    ],
+    "pricing": {
+        "individual": {"temple": "$151", "home": "$251"},
+        "ayush": {"temple": "$151", "home": "$201"},
+        "chandi": {"temple": "$401", "home": "$501"},
+        "saamoohika": {"sudarsana": "$116"}
+    }
+}
+
+STORY_INTENT_MAP = [
+    ("varalakshmi vratham", "Rituals/Varalakshmi_Vratham.txt"),
+    ("varalakshmi", "Rituals/Varalakshmi_Vratham.txt"),
+    ("guru poornima", "Rituals/Guru_Poornima.txt"),
+    ("mahalakshmi jayanthi", "Rituals/Mahalakshmi_Jayanthi.txt"),
+    ("mahalakshmi jayanti", "Rituals/Mahalakshmi_Jayanthi.txt"),
+    ("diwali", "Rituals/story_of_Diwali.txt"),
+    ("deepavali", "Rituals/story_of_Diwali.txt"),
+]
+
+
+def homam_list_response() -> str:
+    lines = ["🪔 HOMAMS PERFORMED AT THE TEMPLE:\n"]
+    for h in HOMAMS_DATA["list"]:
+        lines.append(f"• {h}")
+
+    lines.append("\n📞 For booking:")
+    lines.append("• Phone: 303-898-5514")
+    lines.append("• Email: manager@svtempleco.org")
+
+    return "\n".join(lines)
+
+
+def homam_cost_response(q: str) -> str:
+    q = q.lower()
+    p = HOMAMS_DATA["pricing"]
+
+    if "ayush" in q:
+        return (
+            "🪔 AYUSH HOMAM – SPONSORSHIP\n\n"
+            f"• At Temple: {p['ayush']['temple']}\n"
+            f"• At Home: {p['ayush']['home']}\n\n"
+            "📞 Contact: 303-898-5514"
+        )
+
+    if "chandi" in q:
+        return (
+            "🪔 CHANDI HOMAM – SPONSORSHIP\n\n"
+            f"• At Temple: {p['chandi']['temple']}\n"
+            f"• At Home: {p['chandi']['home']}\n\n"
+            "📞 Contact: 303-898-5514"
+        )
+
+    if "saamoohika" in q or "group" in q:
+        return (
+            "🪔 SAAMOOHIKA SUDARSANA HOMAM\n\n"
+            f"• Sponsorship per family: {p['saamoohika']['sudarsana']}\n\n"
+            "📞 Contact: 303-898-5514"
+        )
+
+    return (
+        "🪔 INDIVIDUAL HOMAM – SPONSORSHIP\n\n"
+        f"• At Temple: {p['individual']['temple']}\n"
+        f"• At Home: {p['individual']['home']}\n\n"
+        "📞 Contact: 303-898-5514"
+    )
+
+    
+# ============================================================
+# STORY INTENT MAPPING
+# ============================================================
+
+STORY_INTENT_MAP = [
+    ("varalakshmi vratham", "Rituals/Varalakshmi_Vratham.txt"),
+    ("varalakshmi", "Rituals/Varalakshmi_Vratham.txt"),
+    ("guru poornima", "Rituals/Guru_Poornima.txt"),
+    ("mahalakshmi jayanthi", "Rituals/Mahalakshmi_Jayanthi.txt"),
+    ("mahalakshmi jayanti", "Rituals/Mahalakshmi_Jayanthi.txt"),
+    ("diwali", "Rituals/story_of_Diwali.txt"),
+    ("deepavali", "Rituals/story_of_Diwali.txt"),
+]
+
+def handle_story_query(q: str) -> str | None:
+    """Handle story queries by loading from Rituals directory"""
+    q = q.lower()
+    
+    for key, filename in STORY_INTENT_MAP:
+        if key in q:
+            # Correct path with Rituals already in filename
+            path = os.path.join("data_raw", filename)
+            
+            if os.path.exists(path):
+                try:
+                    with open(path, "r", encoding="utf-8") as f:
+                        content = f.read().strip()
+                        if content:
+                            return _format_bullets(content)
+                except Exception as e:
+                    print(f"Error reading {path}: {e}")
+            else:
+                print(f"Story file not found: {path}")
+    
+    return None
+
+
+
+def answer_user(query, user_id=None):
     """
     Main function to answer user questions.
     Priority: Hardcoded responses > RAG search
     """
-    q = (question or "").lower()
+    q = (query or "").lower()
     now = datetime.now(ZoneInfo("America/Denver"))
+    current_month_name = now.strftime("%B")  # e.g., "December"
     ts = now.strftime("%B %d, %Y %I:%M %p %Z")
     out = None
 
     # --------------------------------------------------------
-    # 1. TEMPLE HOURS & TIMINGS
+    # TEMPORAL MAPPING LOGIC
     # --------------------------------------------------------
-    if any(word in q for word in ["open", "close", "timing", "hours"]):
-        if "cafeteria" in q:
-            out = f"• {TEMPLE_INFO['hours']['cafeteria']}"
-        elif "today" in q:
-            if _is_weekend(now):
-                out = f"• Yes, temple is open today.\n• {TEMPLE_INFO['hours']['weekend']}"
+    is_upcoming_query = any(phrase in q for phrase in [
+        "upcoming", "next", "this month", "what's happening", "events"
+    ])
+    
+    # If the user asks for "upcoming events", append the current month
+    # to the RAG query to force the vector search to find relevant data.
+    rag_query = query
+    if is_upcoming_query and not any(month in q for month in [
+        "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"
+    ]):
+        rag_query = f"{current_month_name} {query}"
+
+    # --- SESSION GREETING LOGIC ---
+    # displays Om Namo Venkatesaya only on the first interaction
+    greeting = ""
+    if user_id and user_id not in sessions_seen:
+        greeting = "Om Namo Venkatesaya Namah\n\n"
+        sessions_seen.add(user_id)
+
+    out = handle_food_query(q, now)
+    if out:
+        return f"{greeting}{out}\n"
+    
+    if (out is None and any(word in q for word in ["open", "close", "timing", "hours"])
+        and not any(w in q for w in ["food", "cafeteria", "annadanam", "prasadam","panchang", "tithi", "nakshatra", "star"])
+       ):
+
+        current_hour = now.hour
+        is_weekend_day = _is_weekend(now)
+        day_name = now.strftime("%A")
+
+        if "today" in q:
+            if is_weekend_day:
+                 if current_hour < 9:
+                     out = (
+                        f"• The temple opens today at 9:00 AM ({day_name})\n"
+                        f"• Weekend hours: 9:00 AM - 8:00 PM"
+                    )
+                 elif current_hour < 20:
+                     out = (
+                        f"• Yes, the temple is open right now\n"
+                        f"• Today’s hours ({day_name}): 9:00 AM - 8:00 PM"
+                     )
+                 else:
+                      out = (
+                        f"• The temple is closed for today ({day_name})\n"
+                        f"• Tomorrow opens at 9:00 AM"
+                     )
             else:
-                out = f"• Yes, temple is open today.\n• {TEMPLE_INFO['hours']['weekday']}"
+                 if current_hour < 9:
+                       out = (
+                        f"• The temple opens today at 9:00 AM ({day_name})\n"
+                        f"• Weekday hours: 9:00 AM - 12:00 PM, 6:00 PM - 8:00 PM"
+                     )
+                 elif current_hour < 12:
+                        out = (
+                        f"• Yes, the temple is open right now\n"
+                        f"• Morning session until 12:00 PM"
+                     )
+                 elif current_hour < 18:
+                        out = (
+                        f"• The temple is closed now\n"
+                        f"• Reopens at 6:00 PM"
+                    )
+                 elif current_hour < 20:
+                        out = (
+                        f"• Yes, the temple is open right now\n"
+                        f"• Evening session until 8:00 PM"
+                    )
+                 else:
+                        out = (
+                        f"• The temple is closed for today ({day_name})\n"
+                        f"• Tomorrow opens at 9:00 AM"
+                    )
         else:
-            out = (
-                f"• {TEMPLE_INFO['hours']['weekday']}\n"
-                f"• {TEMPLE_INFO['hours']['weekend']}\n"
-                f"• {TEMPLE_INFO['hours']['cafeteria']}"
+             out = (
+            "🕉️ TEMPLE HOURS\n\n"
+            "📅 WEEKDAYS (Mon–Fri):\n"
+            "• 9:00 AM – 12:00 PM\n"
+            "• 6:00 PM – 8:00 PM\n\n"
+            "📅 WEEKENDS & HOLIDAYS:\n"
+            "• 9:00 AM – 8:00 PM\n\n"
+            "🍽️ CAFETERIA (Annadanam):\n"
+            "• Saturday & Sunday: 12:00 PM – 2:00 PM"
             )
 
+  
+            
     # --------------------------------------------------------
     # 2. ADDRESS & LOCATION
     # --------------------------------------------------------
-    elif "address" in q or "location" in q or "where is" in q:
+    if out is None and any(phrase in q for phrase in ["address", "location", "where is"]):
         out = (
             f"• Address: {TEMPLE_INFO['address']}\n"
             f"• Website: {TEMPLE_INFO['website']}"
@@ -700,7 +929,7 @@ def answer_user(question: str) -> str:
 
     # --------------------------------------------------------
     # 3. CONVERSATIONAL: "What's happening today/at temple?"
-    # --------------------------------------------------------
+    # --------------------------------------------------------  
     if out is None and any(phrase in q for phrase in [
         "what's happening", "whats happening", "happening today", 
         "happening at temple", "any event", "events today",
@@ -772,7 +1001,7 @@ def answer_user(question: str) -> str:
     # --------------------------------------------------------
     # 4. CONTACT INFORMATION
     # --------------------------------------------------------
-    elif any(word in q for word in ["phone", "contact", "call", "email", "number"]):
+    if out is None and any(word in q for word in ["phone", "contact", "call", "email", "number"]):
         if "chairman" in q:
             out = f"• Chairman: {TEMPLE_INFO['contacts']['chairman']}"
         elif "president" in q:
@@ -791,16 +1020,23 @@ def answer_user(question: str) -> str:
     # --------------------------------------------------------
     # 4. VAHANA POOJA
     # --------------------------------------------------------
-    elif "vahana" in q or "car pooja" in q:
+    if out is None and any(word in q for word in ["vahana", "car pooja"]):
         out = f"• {INSTRUCTIONS['vahana_pooja']}"
 
     # --------------------------------------------------------
     # 5. COMMITTEE & LEADERSHIP CONTACTS
     # --------------------------------------------------------
-    if out is None and any(word in q for word in ["committee", "chair", "chairperson", "leadership", "board"]):
+    if out is None and any(word in q for word in ["committee", "chair", "chairperson", "chairman", "president", "leadership", "board", "trustee", "who is"]):
+        
+        # Chairman or President query
+        if "chairman" in q:
+            out = f"👤 CHAIRMAN:\n• {TEMPLE_INFO['contacts']['chairman']}"
+        
+        elif "president" in q:
+            out = f"👤 PRESIDENT:\n• {TEMPLE_INFO['contacts']['president']}"
         
         # Specific committee queries
-        if any(word in q for word in ["catering", "food", "annapurna", "annapoorna"]):
+        elif any(word in q for word in ["catering", "food", "annapurna", "annapoorna"]):
             out = f"• {TEMPLE_INFO['committees']['annapoorna']}\n• For catering services, contact: Smt. Swetha Sarvabhotla at 537-462-6167"
         
         elif any(word in q for word in ["religious", "pooja", "ritual"]):
@@ -836,30 +1072,36 @@ def answer_user(question: str) -> str:
             out += "COMMITTEES:\n"
             for committee_info in TEMPLE_INFO['committees'].values():
                 out += f"• {committee_info}\n"
-
     # --------------------------------------------------------
-    # 6. SCHEDULING / BOOKING
+    # 6. VASTRAM
     # --------------------------------------------------------
-    elif any(word in q for word in ["schedule", "book", "appointment", "sponsor"]):
-        if "vastram" in q:
-            out = f"• Vastram Sponsorship: {INSTRUCTIONS['vastram_sponsor']}"
-        else:
-            out = f"• To schedule a pooja: {INSTRUCTIONS['schedule_pooja']}"
-
+  
+    if out is None and any(word in q for word in ["vastram", "vastra", "cloth", "samarpanam", "saree"]):
+           if any(word in q for word in ["cost", "price", "sponsorship", "how much", "fee"]):
+               out = (
+                     "VASTRAM SAMARPANAM SPONSORSHIP\n\n"
+                      "• Sponsorship: $516\n"
+                      "• Includes: Kalyanam sponsorship ($151) + Vastram offering\n"
+                      "• Vastram provided by temple for Venkateswara Swamy & Ammavaru\n"
+                       "• Performed during Second Saturday Kalyanam (11:00 AM)\n\n"
+                       "• Contact Manager: 303-898-5514\n"
+                       "• Advance booking: 2-3 weeks required"
+               )
+   
     # --------------------------------------------------------
-    # 6. DAILY SCHEDULE
+    # 7. DAILY SCHEDULE
     # --------------------------------------------------------
-    elif "daily" in q and ("pooja" in q or "schedule" in q):
+    if out is None and "daily" in q and ("pooja" in q or "schedule" in q):
         out = "Daily Temple Schedule:\n" + "\n".join(f"• {s}" for s in DAILY_SCHEDULE)
 
     # --------------------------------------------------------
-    # 7. MONTHLY SCHEDULE
+    # 8. MONTHLY SCHEDULE
     # --------------------------------------------------------
-    elif "monthly" in q and ("pooja" in q or "schedule" in q):
+    if out is None and "monthly" in q and ("pooja" in q or "schedule" in q):
         out = "Monthly Schedule:\n" + "\n".join(f"• {s}" for s in MONTHLY_SCHEDULE)
 
     # --------------------------------------------------------
-    # 7. ITEMS REQUIRED FOR POOJAS
+    # 9. ITEMS REQUIRED FOR POOJAS
     # --------------------------------------------------------
     if out is None and any(word in q for word in ["item", "bring", "need", "required", "material", "samagri"]):
         # Detect which type of pooja
@@ -925,14 +1167,14 @@ def answer_user(question: str) -> str:
             out += "\n📞 Contact: 303-898-5514"
 
     # --------------------------------------------------------
-    # 8. PANCHANG & DATE QUERIES
+    # 10. PANCHANG & DATE QUERIES
     # --------------------------------------------------------
     # Only trigger if query is actually asking about panchang/dates
     is_panchang_query = (
-        any(word in q for word in ["panchang", "tithi", "nakshatra"]) or
+        any(word in q for word in ["panchang", "tithi", "nakshatra", "star"]) or
         any(phrase in q for phrase in ["what's happening", "whats happening", "happening today", "happening at temple", "events today", "today's event"]) or
         (any(word in q for word in ["today", "tomorrow"]) and any(word in q for word in ["panchang", "tithi", "nakshatra", "event", "special", "auspicious"])) or
-        any(month in q for month in ["dec", "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov"]) and any(word in q for word in ["purnima", "amavasya", "ekadasi", "full moon", "new moon"])
+        any(month in q for month in ["dec", "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov"]) and any(word in q for word in ["purnima", "amavasya", "Amavasya","ekadashi","ekadasi", "full moon", "new moon"])
     )
     
     if out is None and is_panchang_query:
@@ -1048,14 +1290,179 @@ def answer_user(question: str) -> str:
                         f"• Please contact temple manager at 303-898-5514"
                     )
 
+
     # --------------------------------------------------------
-    # 9. ABHISHEKAM SCHEDULES (only if asking "when")
+    # 122. ABHISHEKAM SPONSORSHIP/PRICING
     # --------------------------------------------------------
-    if out is None and any(word in q for word in ["when", "what time", "schedule"]):
-        for keyword, schedule in WEEKLY_EVENTS.items():
-            if keyword in q or keyword.replace(" ", "") in q:
-                out = f"• {schedule}"
-                break
+    if out is None and "abhishekam" in q and any(word in q for word in ["cost", "price", "sponsorship", "donation", "fee", "how much", "charge"]):
+        out = (
+            "🪔 ABHISHEKAM SPONSORSHIP DETAILS\n\n"
+            "THREE TYPES AVAILABLE:\n\n"
+            "📿 TYPE 1: INDIVIDUAL ABHISHEKAM (Exclusive Service)\n"
+            "• Temple Sponsorship: $151\n"
+            "• Home Sponsorship: $201\n"
+            "• Available for: Shiva, Ganapathi, Hanuman, Sai Baba, Kalyana Srinivasa with Sri Devi and Bhu Devi\n"
+            "• Booking: Call 303-898-5514 (advance booking required)\n\n"
+            "📅 TYPE 2: TEMPLE SCHEDULED ABHISHEKAM (Regular Monthly)\n"
+            "• 1st Saturday - Sri Venkateswara (Moola Murthy): $151\n"
+            "• 1st Sunday - Sri Siva Abhishekam\n"
+            "• 2nd Saturday - Sri Venkateswara Kalyanam\n"
+            "• 2nd Sunday - Sri Vijaya Ganapathi/Murugan\n"
+            "• 3rd Friday - Sri Andal Ammavaru: $116\n"
+            "• 3rd Saturday - Sri Mahalakshmi Ammavaru: $116\n"
+            "• 3rd Sunday - Sri Shirdi Sai Baba/Raghavendra Swamy\n"
+            "• 4th Saturday - Sri Hanuman\n"
+            "• 4th Sunday - Sri Sudarshana/Narasimha Homam & Abhishekam\n"
+            "• Booking: 2-3 weeks in advance\n\n"
+            "👨‍👩‍👧‍👦 TYPE 3: SAAMOOHIKA ABHISHEKAM (Group Service)\n"
+            "• Sponsorship: $51 per family\n"
+            "• For: Shiva, Ganapathi, Hanuman, Sai Baba\n\n"
+            "📞 For booking or specific deity abhishekam:\n"
+            f"• Phone: {TEMPLE_INFO['phone']}\n"
+            f"• Manager: {TEMPLE_INFO['manager_phone']}\n"
+            f"• Email: {TEMPLE_INFO['email']}"
+        )
+
+    # --------------------------------------------------------
+    # 11. ABHISHEKAM SCHEDULES (only if asking "when")
+    # --------------------------------------------------------
+    if out is None and ("abhishekam" in q or "kalyanam" in q) and any(word in q for word in ["when", "what time", "schedule"]):
+    
+    # Special formatting for Venkateswara Kalyanam
+        if "kalyanam" in q and "venkateswara" in q:
+            out = (
+                "🪔 SRI VENKATESWARA SWAMY KALYANAM\n\n"
+                "📅 SCHEDULE:\n"
+                "• Second Saturday - 11:00 AM\n\n"
+                "💰 SPONSORSHIP OPTIONS:\n"
+                "• Kalyanam only: $151\n"
+                "• Kalyanam with Vastram: $516\n"
+                "  (Temple provides Vastram for Venkateswara Swamy & Ammavaru)\n\n"
+                "📞 Contact Manager: 303-898-5514"
+            )
+        else:
+            # Existing logic for other abhishekams
+            for keyword, schedule in WEEKLY_EVENTS.items():
+                if keyword in q or keyword.replace(" ", "") in q:
+                    out = f"• {schedule}"
+                    break
+
+
+  
+
+
+
+# --------------------------------------------------------
+# HOMAM INTENT HANDLING
+# --------------------------------------------------------
+# --------------------------------------------------------
+# HOMAMS: LIST & COST (ARJITHA SEVA)
+# --------------------------------------------------------
+    if out is None and "homam" in q:
+
+         # ---- LIST OF HOMAMS ----
+        if any(w in q for w in ["list", "types", "available"]):
+             lines = ["🪔 HOMAMS PERFORMED AT THE TEMPLE:\n"]
+             for h in HOMAMS_DATA["list"]:
+                lines.append(f"• {h}")
+
+                lines.append("\n📞 For booking and details:")
+                lines.append("• Phone: 303-898-5514")
+                lines.append("• Email: manager@svtempleco.org")
+
+                out = "\n".join(lines)
+
+                # ---- HOMAM COST / SPONSORSHIP ----
+        elif any(w in q for w in ["cost", "price", "how much", "sponsorship"]):
+                p = HOMAMS_DATA["pricing"]
+
+                if "ayush" in q:
+                 out = (
+                     "🪔 AYUSH HOMAM – SPONSORSHIP\n\n"
+                      f"• At Temple: {p['ayush']['temple']}\n"
+                      f"• At Home: {p['ayush']['home']}\n\n"
+                  "📞 Contact: 303-898-5514"
+                 )
+
+                elif "chandi" in q:
+                    out = (
+                        "🪔 CHANDI HOMAM – SPONSORSHIP\n\n"
+                        f"• At Temple: {p['chandi']['temple']}\n"
+                        f"• At Home: {p['chandi']['home']}\n\n"
+                        "📞 Contact: 303-898-5514"
+                    )
+
+                elif "saamoohika" in q or "group" in q:
+                    out = (
+                        "🪔 SAAMOOHIKA SUDARSANA HOMAM\n\n"
+                        f"• Sponsorship per family: {p['saamoohika']['sudarsana']}\n\n"
+                        "📞 Contact: 303-898-5514"
+                    )
+
+                else:
+                    out = (
+                        "🪔 INDIVIDUAL HOMAM – SPONSORSHIP\n\n"
+                        f"• At Temple: {p['individual']['temple']}\n"
+                        f"• At Home: {p['individual']['home']}\n\n"
+                        "📞 Contact: 303-898-5514"
+                    )
+
+# --------------------------------------------------------
+# CULTURAL / SINGING / DANCE / BHAJAN / PERFORMANCE
+# --------------------------------------------------------
+    if out is None and any(w in q for w in [
+        "cultural",
+        "cultural performance",
+        "dance",
+        "bharatanatyam",
+        "kuchipudi",
+        "singing",
+        "music",
+        "vocal",
+        "bhajan",
+        "bhajans",
+        "kirtan",
+        "kirtanam",
+        "concert",
+        "program",
+        "performance"
+    ]):
+        out = (
+            "🎶 Cultural & Devotional Performances\n\n"
+            "For cultural programs, dance, singing, bhajans, or devotional performances "
+            "at the temple, please contact the Temple Manager directly.\n\n"
+            "📞 Phone: 303-898-5514\n"
+            "📧 Email: manager@svtempleco.org"
+        )
+
+    # --------------------------------------------------------
+# HANDLE VAGUE STORY QUERIES (NEW ADDITION)
+# --------------------------------------------------------
+# --------------------------------------------------------
+# STORY HANDLING (STRICT & SAFE)
+# --------------------------------------------------------
+# --------------------------------------------------------
+# STORY HANDLING (FILE-BASED FIRST, THEN CLARIFY)
+# --------------------------------------------------------
+    if out is None and any(word in q for word in ["story", "significance", "explain"]):
+
+        # 1️⃣ Try to resolve a known story FIRST
+        story_out = handle_story_query(q)
+
+        if story_out:
+            out = story_out
+
+        # 2️⃣ Only if NO known story matched → ask to clarify
+        else:
+            out = (
+                "• Please specify which story you would like:\n\n"
+                "• Varalakshmi Vratham story\n"
+                "• Guru Poornima story\n"
+                "• Diwali story\n"
+                "• Mahalakshmi Jayanthi story\n\n"
+                "• Example: 'Tell me the story of Guru Poornima'"
+            )
+
 
     # --------------------------------------------------------
     # 9. RAG SEARCH FOR EVERYTHING ELSE
@@ -1070,20 +1477,20 @@ def answer_user(question: str) -> str:
                 break
         
         # If no month specified and query is about dates, use current month
-        is_date_query = any(word in q for word in ["full moon", "purnima", "amavasya", "ekadasi", "ekadashi", "new moon"])
+        is_date_query = any(word in q for word in ["full moon", "purnima", "amavasya", "ekadasi", "ekadashi", "new moon" "pournami"])
         if not specified_month and is_date_query:
             specified_month = now.strftime("%B").lower()
         
         try:
             # For "meaning" or "what is" queries, use more chunks and specific handling
             if any(word in q for word in ["meaning", "what is", "explain", "significance", "why", "about"]):
-                k_value = 10  # More results for explanatory queries
+                k_value = 20  # More results for explanatory queries
             else:
-                k_value = 7
+                k_value = 10
             
             # Search for relevant information in indexed documents
             # This will search ALL .txt files in data_raw/ including rituals/*.txt
-            chunks = get_chunks(question, k=k_value)
+            chunks = get_chunks(rag_query, k=k_value)
             
             if chunks:
                 # Combine relevant text from chunks
@@ -1119,7 +1526,7 @@ def answer_user(question: str) -> str:
                 
                 if texts:
                     # For meaning/explanation queries, use more content
-                    if any(word in q for word in ["meaning", "what is", "explain", "significance", "why"]):
+                    if any(word in q for word in ["meaning", "what is", "explain", "significance", "why", "story"]):
                         context = "\n".join(texts[:7])  # Top 7 for detailed answers
                     else:
                         context = "\n".join(texts[:5])  # Top 5 for regular queries
@@ -1127,30 +1534,40 @@ def answer_user(question: str) -> str:
                     # Use LLM to generate natural conversational response
                     try:
                         prompt = f"""You are a helpful assistant for Sri Venkateswara Temple in Castle Rock, Colorado.
-Based on the following information from temple documents, please answer the user's question naturally and conversationally.
+Strictly follow these rules:
+1. Use the provided context. For stories, provide a comprehensive narrative using all retrieved chunks. If the answer isn't there, say you don't know.
+2. ALWAYS respond in bullet points (using •).
+3. Do not use introductory filler (e.g., "Based on the documents...").
+4. Current Date for Context: {now.strftime('%B %d, %Y')}.
 
 Temple Information:
 {context}
 
-User Question: {question}
+
+User Question: {query}
 
 Instructions:
-- Answer naturally and conversationally in a friendly tone
-- Use ONLY the information provided above from temple documents
-- If the information doesn't fully answer the question, provide what you can and mention contacting the temple for more details
-- Keep response concise (3-5 sentences for simple queries, more for complex questions)
-- Include relevant details from the temple information
+- Answer naturally and conversationally based ONLY on the temple information provided in the context
+- NEVER add disclaimers like "Note:", "[Note:", "While the context...", or "I cannot provide..., Additional resources, .txt files"
+- NEVER mention what information is missing or not provided
+- NEVER say "the specific details are not provided" or similar meta-commentary
+- If you have partial information, share what you have without disclaimers
+- ALWAYS use "sponsorship" instead of "cost" or "price" when referring to service fees
+- ALWAYS use "donation" instead of "cost" when appropriate
+- Keep responses concise, helpful, and complete
 - For dates/schedules, be specific with the information provided
+- If you truly have NO relevant information, simply say: "For detailed information, please contact the temple Manager at 303-660-9555"
 - Do not make up information not present in the temple documents
+- Answer directly and completely without meta-commentary about sources or missing details
 
 Answer:"""
 
                         # Call AWS Bedrock Claude
                         response = bedrock_runtime.invoke_model(
-                            modelId="anthropic.claude-3-5-sonnet-20241022-v2:0",
+                            modelId='us.anthropic.claude-3-5-haiku-20241022-v1:0',
                             body=json.dumps({
                                 "anthropic_version": "bedrock-2023-05-31",
-                                "max_tokens": 500,
+                                "max_tokens": 1200,
                                 "temperature": 0.3,
                                 "messages": [{
                                     "role": "user",
@@ -1189,8 +1606,6 @@ Answer:"""
     # FINAL FORMATTED RESPONSE
     # --------------------------------------------------------
     return (
-        f"{ts}\n"
-        f"Om Namo Venkateshaya Namah\n\n"
+        #f"{ts}\n"
         f"{out}\n\n"
-        f"Thank you. Om Namo Venkateshaya!"
-    )
+        )

@@ -7,7 +7,6 @@ node_modules/
 package-lock.json
 
 # Data & logs
-data_raw/
 logs/
 
 # OS / Editor

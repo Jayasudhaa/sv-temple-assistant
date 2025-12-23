@@ -1,0 +1,35 @@
+Food Query Test Results
+================================================================================
+
+Total chunks: 763
+Food-related chunks: 38
+
+Query Test Results:
+
+Query: 'food'
+Results: 5
+Top result: 9. Why do offer food to the Lord before eating it?
+Indians make an offering of food to the Lord and ...
+
+Query: 'cafeteria'
+Results: 5
+Top result: OCTOBER 2ND, 2025 - SRI VENKATESWARA JAYANTI
+Date: Thursday, October 2, 2025
+Also Known As: Venkates...
+
+Query: 'annadanam'
+Results: 5
+Top result: OCTOBER 2ND, 2025 - SRI VENKATESWARA JAYANTI
+Date: Thursday, October 2, 2025
+Also Known As: Venkates...
+
+Query: 'when is lunch served'
+Results: 5
+Top result: OCTOBER 2ND, 2025 - SRI VENKATESWARA JAYANTI
+Date: Thursday, October 2, 2025
+Also Known As: Venkates...
+
+Query: 'cooked food'
+Results: 5
+Top result: 9. Why do offer food to the Lord before eating it?
+Indians make an offering of food to the Lord and ...
