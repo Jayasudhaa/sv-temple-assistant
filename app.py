@@ -436,7 +436,7 @@ def handler(event, context):
 ────────────────────────
 🙏 Namaste! Welcome to Sri Venkateswara Temple!
 📍 Location: 1495 South Ridge Road, Castle Rock, CO 80104
-📞 Phone: 303-898-5514 | Manager: 303-660-9555 🌐 www.svtempleco.org
+📞 Manager: 303-898-5514 | Phone: 303-660-9555 🌐 www.svtempleco.org
 ⏰ TEMPLE HOURS:Weekdays: 9 AM-12 PM, 6PM-8 PM,Weekends/Holidays: 9 AM-8 PM, 
 Cafeteria: Sat-Sun 12 PM-2 PM
 

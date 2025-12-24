@@ -480,9 +480,8 @@ IN ADDITION (if done at home):
 
 TEMPLE_INFO = {
     "address": "1495 South Ridge Road, Castle Rock, Colorado 80104",
-    "phone": "303-898-5514",
-    "manager_phone" : "303-660-9555",
-    "temple_main": "303-660-9555",
+    "Temple_Manager": "303-898-5514",
+    "Temple" : "303-660-9555",
     "email": "manager@svtempleco.org",
     "website": "www.svtempleco.org",
     
@@ -534,7 +533,7 @@ MONTHLY_SCHEDULE = [
 
 WEEKLY_EVENTS = {
     # Week 1
-    "venkateswara swamy abhishekam": "1st Saturday 11:00 AM – Sri Venkateswara Swamy Abhishekam (Moola Murthy), - Sponsorship: $151, - Vastram Option: $516 (includes Kalyanam + temple-provided Vastram), - Contact: 303-898-5514",
+    "venkateswara swamy abhishekam": "1st Saturday 11:00 AM – Sri Venkateswara Swamy Abhishekam (Moola Murthy)",
     "1st saturday": "11:00 AM – Sri Venkateswara Swamy Abhishekam (Moola Murthy)",
     "first saturday": "11:00 AM – Sri Venkateswara Swamy Abhishekam (Moola Murthy)",
     
@@ -544,9 +543,9 @@ WEEKLY_EVENTS = {
     "first sunday": "11:00 AM – Sri Siva Abhishekam",
     
     # Week 2
-    "venkateswara swamy kalyanam": "2nd Saturday 11:00 AM – Sri Venkateswara Swamy Kalyanam , - Sponsorship: $151, - Vastram Option: $516 (includes Kalyanam + temple-provided Vastram), - Contact: 303-898-5514",
-     "2nd saturday": "11:00 AM – Sri Venkateswara Swamy Kalyanam , - Sponsorship: $151, - Vastram Option: $516 (includes Kalyanam + temple-provided Vastram), - Contact: 303-898-5514",
-    "second saturday": "11:00 AM – Sri Venkateswara Swamy Kalyanam , - Sponsorship: $151, - Vastram Option: $516 (includes Kalyanam + temple-provided Vastram), - Contact: 303-898-5514",
+    "venkateswara swamy kalyanam": "2nd Saturday 11:00 AM – Sri Venkateswara Swamy Kalyanam ",
+     "2nd saturday": "11:00 AM – Sri Venkateswara Swamy Kalyanam ",
+    "second saturday": "11:00 AM – Sri Venkateswara Swamy Kalyanam ,",
     
     "vijaya ganapati": "2nd Sunday 11:00 AM – Sri Vijaya Ganapati and Sri Valli Devasena Sahitha Murugan Abhishekam",
     "ganapati abhishekam": "2nd Sunday 11:00 AM – Sri Vijaya Ganapati and Sri Valli Devasena Sahitha Murugan Abhishekam",
@@ -584,14 +583,15 @@ WEEKLY_EVENTS = {
 # ============================================================
 
 INSTRUCTIONS = {
-    "vahana_pooja": "Walk-ins are welcome subject to availability of priest. Bring: 4 lemons, 1 coconut, fruits and flowers",
-    "schedule_pooja": "Contact manager at 303-898-5514 or email manager@svtempleco.org",
-    "vastra cost/sponsor": "Vastram Samarpanam (Offering New Clothes)\n\n"
-                     "• Sacred ritual of offering clothes to deities\n"
-                     "• Second Saturday Kalyanam ceremony (11:00 AM)\n"
-                     "• Sponsorship: $516 (includes Kalyanam + temple-provided Vastram)\n"
-                     "• Contact Manager: 303-898-5514"
+    "vahana_pooja": (
+        "Walk-ins are welcome subject to availability of priest. "
+        "Bring: 4 lemons, 1 coconut, fruits and flowers"
+    ),
+    "schedule_pooja": (
+        "Please contact the temple manager to schedule a pooja."
+    ),
 }
+
 
 # ============================================================
 # UTILITY FUNCTIONS
@@ -689,7 +689,7 @@ def handle_food_query(q: str, now: datetime) -> str | None:
         return (
             "• Prasadam is available during temple poojas\n"
             "• Availability depends on the pooja schedule\n"
-            f"• Contact: {TEMPLE_INFO['phone']}"
+            +temple_manager_contact()
         )
 
     # --------------------------------------------------
@@ -701,13 +701,13 @@ def handle_food_query(q: str, now: datetime) -> str | None:
                 "• Annadanam (temple cafeteria) is available today\n"
                 "• Serving time: 12:00 PM – 2:00 PM\n"
                 "• Traditional vegetarian meals are served\n\n"
-                f"• Contact: {TEMPLE_INFO['phone']}"
+                +temple_manager_contact()
             )
         return (
             f"• Annadanam is not available today ({day})\n"
             "• Served only on Saturdays & Sundays\n"
             "• Timing: 12:00 PM – 2:00 PM\n\n"
-            f"• Contact: {TEMPLE_INFO['phone']}"
+            +temple_manager_contact()
         )
 
     return None
@@ -748,11 +748,7 @@ def homam_list_response() -> str:
     lines = ["🪔 HOMAMS PERFORMED AT THE TEMPLE:\n"]
     for h in HOMAMS_DATA["list"]:
         lines.append(f"• {h}")
-
-    lines.append("\n📞 For booking:")
-    lines.append("• Phone: 303-898-5514")
-    lines.append("• Email: manager@svtempleco.org")
-
+    lines.append(temple_manager_contact())
     return "\n".join(lines)
 
 
@@ -763,34 +759,172 @@ def homam_cost_response(q: str) -> str:
     if "ayush" in q:
         return (
             "🪔 AYUSH HOMAM – SPONSORSHIP\n\n"
-            f"• At Temple: {p['ayush']['temple']}\n"
-            f"• At Home: {p['ayush']['home']}\n\n"
-            "📞 Contact: 303-898-5514"
+          +temple_manager_contact()
         )
 
     if "chandi" in q:
         return (
             "🪔 CHANDI HOMAM – SPONSORSHIP\n\n"
-            f"• At Temple: {p['chandi']['temple']}\n"
-            f"• At Home: {p['chandi']['home']}\n\n"
-            "📞 Contact: 303-898-5514"
+           +temple_manager_contact()
         )
 
     if "saamoohika" in q or "group" in q:
         return (
             "🪔 SAAMOOHIKA SUDARSANA HOMAM\n\n"
             f"• Sponsorship per family: {p['saamoohika']['sudarsana']}\n\n"
-            "📞 Contact: 303-898-5514"
+            +temple_manager_contact()
         )
 
     return (
         "🪔 INDIVIDUAL HOMAM – SPONSORSHIP\n\n"
         f"• At Temple: {p['individual']['temple']}\n"
         f"• At Home: {p['individual']['home']}\n\n"
-        "📞 Contact: 303-898-5514"
+        +temple_manager_contact()
     )
+def handle_lunar_dates(q: str) -> str | None:
+    q = q.lower()
 
-    
+    # 1️⃣ Guard festival story
+    if "guru" in q and "poornima" in q:
+        return None
+
+    # 2️⃣ Detect lunar intent
+    if any(w in q for w in ["poornima", "purnima", "full moon", "pournami"]):
+        title = "🌕 POORNIMA DATES"
+        keyword = "purnima"
+        paths = ["data_raw/Events/Fullmoon/Purnima_dates.txt"]
+
+    elif any(w in q for w in ["amavasya", "new moon", "no moon"]):
+        title = "🌑 AMAVASYA DATES"
+        keyword = "amavasya"
+        paths = ["data_raw/Events/Amavasya/Amavasya_dates.txt"]
+
+    else:
+        return None
+
+    # 3️⃣ Detect optional month
+    MONTHS = [
+        "january","february","march","april","may","june",
+        "july","august","september","october","november","december"
+    ]
+
+    target_month = None
+    for m in MONTHS:
+        if m[:3] in q:
+            target_month = m
+            break
+
+    # 4️⃣ Read files
+    results = []
+    for path in paths:
+        if not os.path.exists(path):
+            continue
+
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                l = line.lower()
+                if keyword in l:
+                    if not target_month or target_month in l:
+                        results.append(line.strip())
+
+    if not results:
+        return None
+
+    # 5️⃣ Build output
+    title += f" ({target_month.capitalize()})" if target_month else " (Full Year)"
+
+    out = [title, ""]
+    out.extend(f"• {r}" for r in results)
+
+    return "\n".join(out)
+
+
+
+def handle_pooja_schedule(q: str) -> str | None:
+    q = q.lower()
+    lines = []
+
+    # -----------------------------
+    # DAILY POOJAS
+    # -----------------------------
+    if "daily" in q and "pooja" in q:
+        lines.append("📿 DAILY POOJA SCHEDULE:\n")
+        for s in DAILY_SCHEDULE:
+            lines.append(f"• {s}")
+
+    # -----------------------------
+    # WEEKLY EVENTS (Abhishekam / Homam / Kalyanam)
+    # -----------------------------
+    if any(w in q for w in ["weekly", "abhishekam", "homam", "kalyanam", "when"]):
+        for key, schedule in WEEKLY_EVENTS.items():
+            if key in q:
+                lines.append("\n🪔 WEEKLY SPECIAL POOJA:\n")
+                lines.append(f"• {schedule}")
+                break
+
+    # -----------------------------
+    # MONTHLY EVENTS (INCLUDE WEEKLY + MONTHLY)
+    # -----------------------------
+    if any(w in q for w in ["monthly", "this month", "events this month", "month events"]):
+
+        lines.append("📅 MONTHLY TEMPLE EVENTS\n")
+
+    # 1️⃣ WEEKLY EVENTS (Recurring)
+        lines.append("🪔 WEEKLY EVENTS:\n")
+        for s in sorted(set(WEEKLY_EVENTS.values())):
+            lines.append(f"• {s}")
+
+    # 2️⃣ MONTHLY EVENTS
+            lines.append("\n🌕 MONTHLY SPECIAL EVENTS:\n")
+        for s in MONTHLY_SCHEDULE:
+            lines.append(f"• {s}")
+
+    # -----------------------------
+    # GENERIC "EVENTS" QUERY
+    # -----------------------------
+    if any(w in q for w in ["events", "special pooja", "what's happening"]):
+        lines.append("📅 TEMPLE EVENTS:\n")
+
+        lines.append("🪔 WEEKLY EVENTS:")
+        for s in set(WEEKLY_EVENTS.values()):
+            lines.append(f"• {s}")
+
+        lines.append("\n🌕 MONTHLY EVENTS:")
+        for s in MONTHLY_SCHEDULE:
+            lines.append(f"• {s}")
+
+    if lines:
+        return "\n".join(lines) + temple_manager_contact()
+
+    return None
+
+
+def handle_sponsorship(q: str) -> str | None:
+    q = q.lower()
+
+    if not any(w in q for w in ["cost", "price", "sponsorship", "how much", "fee"]):
+        return None
+
+    if "kalyanam" in q:
+        return (
+            "💰 SRI VENKATESWARA SWAMY KALYANAM – SPONSORSHIP\n\n"
+            "• Kalyanam only: $151\n"
+            "• Kalyanam with Vastram: $516\n"
+            "  (Temple provides Vastram for Swamy & Ammavaru)\n\n"
+            + temple_manager_contact()
+        )
+
+    if "mahalakshmi" in q:
+        return (
+            "💰 MAHALAKSHMI AMMAVARU ABHISHEKAM – SPONSORSHIP\n\n"
+            "• Abhishekam Sponsorship: $116\n"
+            "• Vastram Sponsorship: $301\n"
+            "  (Includes Abhishekam + temple-provided Vastram)\n\n"
+            + temple_manager_contact()
+        )
+
+    return None
+
 # ============================================================
 # STORY INTENT MAPPING
 # ============================================================
@@ -827,6 +961,12 @@ def handle_story_query(q: str) -> str | None:
     
     return None
 
+def temple_manager_contact() -> str:
+    return (
+        "\n📞 TEMPLE MANAGER CONTACT:\n"
+        f"• Phone: {TEMPLE_INFO['Temple_Manager']}\n"
+        f"• Email: {TEMPLE_INFO['email']}"
+    )
 
 
 def answer_user(query, user_id=None):
@@ -867,7 +1007,35 @@ def answer_user(query, user_id=None):
     if out:
         return f"{greeting}{out}\n"
     
+    # AFTER handle_food_query
+    schedule_out = handle_pooja_schedule(q)
+    if schedule_out:
+        sponsorship = ""
 
+    # Auto-append sponsorship for key poojas
+        if "kalyanam" in q:
+            sponsorship = (
+                "\n💰 SPONSORSHIP DETAILS:\n"
+                 "• Kalyanam only: $151\n"
+                 "• You can offer Vastram for Venkateswara Swamy and Ammavaru. Sponsorship $516 Vastram provided by temple and Includes Kalyanam sponsorship also: $516\n"
+                 +temple_manager_contact()
+            )
+        elif "abhishekam" in q and "venkateswara" in q:
+            sponsorship = (
+                "\n💰 SPONSORSHIP DETAILS:\n"
+                "• Abhishekam Sponsorship: $151\n"
+                 "•You can offer Vastram for Venkateswara Swamy and Ammavaru. Sponsorship $516 , Vastram provided by the temple\n"
+                 +temple_manager_contact()
+         )
+        elif "abhishekam" in q and "mahalakshmi" in q:
+            sponsorship = (
+                "\n💰 SPONSORSHIP DETAILS:\n"
+                "• Abhishekam Sponsorship: $116\n"
+                 "•You can offer Vastram for Mahalaksmi Ammavaru. Sponsorship $301 Vastram provided by temple and Includes Abhishekam sponsorship also \n"
+                 +temple_manager_contact()
+         )
+
+        return f"{greeting}{schedule_out}{sponsorship}\n\n"
     # --------------------------------------------------------
     # ARJITHA SEVA — EXPLANATION, LIST & BOOKING
     # --------------------------------------------------------
@@ -882,9 +1050,7 @@ def answer_user(query, user_id=None):
                 "• These sevas can be performed at the temple or at home (by prior booking).\n"
                 "• Arjitha Sevas include Abhishekam, Archana, Homam, Vrathams, "
                 "and important life-event ceremonies (Samskaras).\n\n"
-                "📞 For booking & availability:\n"
-                f"• Phone: {TEMPLE_INFO['phone']}\n"
-                f"• Email: {TEMPLE_INFO['email']}"
+                 +temple_manager_contact()
             )
             return f"{greeting}{out}\n"
 
@@ -904,8 +1070,7 @@ def answer_user(query, user_id=None):
                 "  – Nischitartham, Hindu Wedding\n"
                 "  – Shastiabdapoorthi, Bheemaratha Shanti\n"
                 "  – Hiranya Shraddham\n\n"
-                "📞 For details & scheduling:\n"
-                f"• Phone: {TEMPLE_INFO['phone']}"
+                +temple_manager_contact()
             )
             return f"{greeting}{out}\n"
 
@@ -919,9 +1084,7 @@ def answer_user(query, user_id=None):
                 "• Contact the temple to confirm date & priest availability\n"
                 "• Book at least 1–3 weeks in advance for life events & homams\n"
                 "• Bring required pooja items on the day of the seva\n\n"
-                "📞 Booking Contact:\n"
-                f"• Phone: {TEMPLE_INFO['phone']}\n"
-                f"• Email: {TEMPLE_INFO['email']}"
+                   +temple_manager_contact()
             )
             return f"{greeting}{out}\n"
 
@@ -930,8 +1093,7 @@ def answer_user(query, user_id=None):
             "Om Namo Venkateshaya Namah 🙏\n\n"
             "• Arjitha Seva is a special priest-performed seva for individual devotees.\n"
             "• Available by prior booking at the temple or at home.\n\n"
-            "📞 For details:\n"
-            f"• Phone: {TEMPLE_INFO['phone']}"
+              +temple_manager_contact()
         )
         return f"{greeting}{out}\n"
 
@@ -943,6 +1105,14 @@ def answer_user(query, user_id=None):
             f"• Address: {TEMPLE_INFO['address']}\n"
             f"• Website: {TEMPLE_INFO['website']}"
         )
+    if "satyanarayana" in q and any(w in q for w in ["time", "timing", "when"]):
+        return (
+            "🪔 SRI SATYANARAYANA SWAMY POOJA\n\n"
+            "• Performed on Full Moon (Pournami) day\n"
+            "• Time: 6:30 PM\n"
+            "• Location: Temple\n\n"
+            + temple_manager_contact()
+    )
 
     # --------------------------------------------------------
     # TEMPLE HOURS / OPEN / CLOSE (FIXED & SAFE)
@@ -1115,10 +1285,7 @@ def answer_user(query, user_id=None):
             if f"{week_of_month}" in schedule:
                 today_info.append("\n🪔 ABHISHEKAM TODAY:")
                 today_info.append(f"• {schedule}")
-                break
-        
-
-        
+                break     
         out = "\n".join(today_info)
 
     # --------------------------------------------------------
@@ -1134,17 +1301,14 @@ def answer_user(query, user_id=None):
         elif "catering" in q or "annapoorna" in q:
             out = f"• Catering: {TEMPLE_INFO['contacts']['catering']}"
         else:
-            out = (
-                f"• Temple: {TEMPLE_INFO['temple_main']}\n"
-                f"• Manager: {TEMPLE_INFO['phone']}\n"
-                f"• Email: {TEMPLE_INFO['email']}"
-            )
+            out = temple_manager_contact()
+            
 
     # --------------------------------------------------------
     # 4. VAHANA POOJA
     # --------------------------------------------------------
     if out is None and any(word in q for word in ["vahana", "car pooja"]):
-        out = f"• {INSTRUCTIONS['vahana_pooja']}"
+        out = f"• {INSTRUCTIONS['vahana_pooja']}" +temple_manager_contact()
 
     # --------------------------------------------------------
     # 5. COMMITTEE & LEADERSHIP CONTACTS
@@ -1210,21 +1374,9 @@ def answer_user(query, user_id=None):
                       "• Includes: Kalyanam sponsorship ($151) + Vastram offering\n"
                       "• Vastram provided by temple for Venkateswara Swamy & Ammavaru\n"
                        "• Performed during Second Saturday Kalyanam (11:00 AM)\n\n"
-                       "• Contact Manager: 303-898-5514\n"
                        "• Advance booking: 2-3 weeks required"
+                       +temple_manager_contact()
                )
-   
-    # --------------------------------------------------------
-    # 7. DAILY SCHEDULE
-    # --------------------------------------------------------
-    if out is None and "daily" in q and ("pooja" in q or "schedule" in q):
-        out = "Daily Temple Schedule:\n" + "\n".join(f"• {s}" for s in DAILY_SCHEDULE)
-
-    # --------------------------------------------------------
-    # 8. MONTHLY SCHEDULE
-    # --------------------------------------------------------
-    if out is None and "monthly" in q and ("pooja" in q or "schedule" in q):
-        out = "Monthly Schedule:\n" + "\n".join(f"• {s}" for s in MONTHLY_SCHEDULE)
 
     # --------------------------------------------------------
     # 9. ITEMS REQUIRED FOR POOJAS
@@ -1290,7 +1442,7 @@ def answer_user(query, user_id=None):
             out += pooja_info['items']
             out += f"\n\n📌 {pooja_info['note']}"
             out += f"\n\n🔗 Complete list: {POOJA_SAMAGRI_URL}"
-            out += "\n📞 Contact: 303-898-5514"
+            out += temple_manager_contact()
 
     # --------------------------------------------------------
     # 10. PANCHANG & DATE QUERIES
@@ -1407,13 +1559,13 @@ def answer_user(query, user_id=None):
                 if target_date:
                     out = (
                         f"• Panchang information for {target_date} is not available in the data files.\n"
-                        f"• Please contact temple manager at 303-898-5514"
+                        +temple_manager_contact()
                     )
                 else:
                     out = (
                         f"• Today is {now.strftime('%B %d, %Y')}\n"
                         f"• Panchang information for today is not available in the data files.\n"
-                        f"• Please contact temple manager at 303-898-5514"
+                        +temple_manager_contact()
                     )
 
 
@@ -1428,7 +1580,6 @@ def answer_user(query, user_id=None):
             "• Temple Sponsorship: $151\n"
             "• Home Sponsorship: $201\n"
             "• Available for: Shiva, Ganapathi, Hanuman, Sai Baba, Kalyana Srinivasa with Sri Devi and Bhu Devi\n"
-            "• Booking: Call 303-898-5514 (advance booking required)\n\n"
             "📅 TYPE 2: TEMPLE SCHEDULED ABHISHEKAM (Regular Monthly)\n"
             "• 1st Saturday - Sri Venkateswara (Moola Murthy): $151\n"
             "• 1st Sunday - Sri Siva Abhishekam\n"
@@ -1443,58 +1594,22 @@ def answer_user(query, user_id=None):
             "👨‍👩‍👧‍👦 TYPE 3: SAAMOOHIKA ABHISHEKAM (Group Service)\n"
             "• Sponsorship: $51 per family\n"
             "• For: Shiva, Ganapathi, Hanuman, Sai Baba\n\n"
-            "📞 For booking or specific deity abhishekam:\n"
-            f"• Phone: {TEMPLE_INFO['phone']}\n"
-            f"• Manager: {TEMPLE_INFO['manager_phone']}\n"
-            f"• Email: {TEMPLE_INFO['email']}"
+             +temple_manager_contact()
         )
 
-    # --------------------------------------------------------
-    # 11. ABHISHEKAM SCHEDULES (only if asking "when")
-    # --------------------------------------------------------
-    if out is None and ("abhishekam" in q or "kalyanam" in q) and any(word in q for word in ["when", "what time", "schedule"]):
-
-        # Special case: Mahalakshmi Ammavaru Abhishekam
-        if "mahalakshmi" in q or "maha lakshmi" in q:
-            out = (
-                "Om Namo Venkateshaya Namah\n\n"
-                "• Third Saturday - 11:00 AM – Sri Mahalakshmi Abhishekam (Moola Murthy)\n"
-                "• Abhishekam Sponsorship is $116\n"
-                "• You can offer Vastram for Mahalakshmi Ammavaru.\n"
-                "  Sponsorship $301 – Vastram provided by temple and includes Abhishekam sponsorship also"
-            )
-
-        # Special formatting for Venkateswara Kalyanam
-        if "kalyanam" in q and "venkateswara" in q:
-            out = (
-                "🪔 SRI VENKATESWARA SWAMY KALYANAM\n\n"
-                "📅 SCHEDULE:\n"
-                "• Second Saturday - 11:00 AM\n\n"
-                "💰 SPONSORSHIP OPTIONS:\n"
-                "• Kalyanam only: $151\n"
-                "• Kalyanam with Vastram: $516\n"
-                "  (Temple provides Vastram for Venkateswara Swamy & Ammavaru)\n\n"
-                "📞 Contact Manager: 303-898-5514"
-            )
-
-        else:
-            # Existing logic for other abhishekams
-            for keyword, schedule in WEEKLY_EVENTS.items():
-                if keyword in q or keyword.replace(" ", "") in q:
-                    out = f"• {schedule}"
-                    break
-
-# --------------------------------------------------------
-# SUDARSHANA / ABHISHEKAM SCHEDULE OVERRIDE
-# --------------------------------------------------------
-# --------------------------------------------------------
-# SUDARSHANA / ABHISHEKAM SCHEDULE OVERRIDE
-# --------------------------------------------------------
-    if out is None and "sudarshana" in q and any(w in q for w in ["when", "schedule", "time"]):
+# ----------------------------------
+# SCHEDULE A POOJA (GENERIC)
+# ----------------------------------
+    if (
+        out is None
+        and "schedule" in q
+        and "pooja" in q
+        and "satyanarayana" not in q
+    ):
         out = (
-            "• Fourth Sunday - 11:00 AM – Sri Sudarshana Homam\n"
-            "• Saamoohika sponsorship available\n"
-            "• Contact temple for booking"
+            "Om Namo Venkateshaya Namah 🙏\n\n"
+            "• To schedule a pooja, please contact the Temple Manager"
+            + temple_manager_contact()
         )
 
 
@@ -1531,16 +1646,9 @@ def answer_user(query, user_id=None):
             "🎶 Cultural & Devotional Performances\n\n"
             "For cultural programs, dance, singing, bhajans, or devotional performances "
             "at the temple, please contact the Temple Manager directly.\n\n"
-            "📞 Phone: 303-898-5514\n"
-            "📧 Email: manager@svtempleco.org"
+            +temple_manager_contact()
         )
 
-    # --------------------------------------------------------
-# HANDLE VAGUE STORY QUERIES (NEW ADDITION)
-# --------------------------------------------------------
-# --------------------------------------------------------
-# STORY HANDLING (STRICT & SAFE)
-# --------------------------------------------------------
 # --------------------------------------------------------
 # STORY HANDLING (FILE-BASED FIRST, THEN CLARIFY)
 # --------------------------------------------------------
@@ -1563,10 +1671,16 @@ def answer_user(query, user_id=None):
                 "• Example: 'Tell me the story of Guru Poornima'"
             )
 
+# --------------------------------------------------------
+# POORNIMA / AMAVASYA (FULL YEAR OR MONTH)
+# --------------------------------------------------------
+    lunar_out = handle_lunar_dates(q)
+    if lunar_out:
+         return f"{greeting}{lunar_out}\n\n" + temple_manager_contact()
 
-    # --------------------------------------------------------
-    # 9. RAG SEARCH FOR EVERYTHING ELSE
-    # --------------------------------------------------------
+# --------------------------------------------------------
+# 9. RAG SEARCH FOR EVERYTHING ELSE
+# --------------------------------------------------------
     if out is None:
         # Detect if user specified a month
         specified_month = None
@@ -1656,7 +1770,6 @@ Instructions:
 - ALWAYS use "donation" instead of "cost" when appropriate
 - Keep responses concise, helpful, and complete
 - For dates/schedules, be specific with the information provided
-- If you truly have NO relevant information, simply say: "For detailed information, please contact the temple Manager at 303-660-9555"
 - Do not make up information not present in the temple documents
 - Answer directly and completely without meta-commentary about sources or missing details
 
@@ -1667,7 +1780,7 @@ Answer:"""
                             modelId='us.anthropic.claude-3-5-haiku-20241022-v1:0',
                             body=json.dumps({
                                 "anthropic_version": "bedrock-2023-05-31",
-                                "max_tokens": 1200,
+                                "max_tokens": 1000,
                                 "temperature": 0.3,
                                 "messages": [{
                                     "role": "user",
@@ -1697,9 +1810,7 @@ Answer:"""
     if not out or not out.strip():
         out = (
             "• I don't have specific information about that right now.\n"
-            f"• Please contact the temple manager:\n"
-            f"• Phone: {TEMPLE_INFO['phone']}\n"
-            f"• Email: {TEMPLE_INFO['email']}"
+             +temple_manager_contact()
         )
 
     # --------------------------------------------------------
