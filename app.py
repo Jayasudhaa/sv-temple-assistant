@@ -20,6 +20,12 @@ events_table = dynamodb.Table('temple-events')
 # SEND WHATSAPP REPLY (EXISTING - NO CHANGES)
 # ---------------------------------------------------------
 def send_reply(to, text):
+    prefix = "Om Namo Venkateshaya 🙏\n\n"
+
+    # Avoid double prefix
+    if not text.strip().lower().startswith("om namo venkateshaya"):
+        text = prefix + text
+
     url = f"https://graph.facebook.com/v22.0/{PHONE_ID}/messages"
     payload = {
         "messaging_product": "whatsapp",
@@ -189,8 +195,8 @@ def scrape_and_broadcast():
         soup = BeautifulSoup(response.content, 'html.parser')
         events = []
         
-        event_imgs = soup.find_all('img', src=lambda x: x and 'eventSlider' in x)
-        
+        event_imgs = soup.select("img[src]")
+                
         for img in event_imgs:
             src = img.get('src', '')
             if any(year in src.lower() for year in ['2025', '2026']):
@@ -227,7 +233,9 @@ def scrape_and_broadcast():
     
     for idx, event in enumerate(events):
         # Check if already posted
-        event_hash = hashlib.md5(event['filename'].encode()).hexdigest()
+        dedupe_key = f"{event['filename']}|{event['image_url']}|{event['name']}"
+        event_hash = hashlib.md5(dedupe_key.encode()).hexdigest()
+
         
         try:
             response = events_table.get_item(Key={'event_hash': event_hash})
