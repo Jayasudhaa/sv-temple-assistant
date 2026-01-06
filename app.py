@@ -3,6 +3,7 @@ import json, os, urllib.request
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from backend.ask_temple import answer_user
+import re
 import boto3
 
 # --- ENV ---
@@ -414,10 +415,11 @@ def handler(event, context):
             # -------------------------------------------------
             # THANK YOU RESPONSE (EXISTING - NO CHANGES)
             # -------------------------------------------------
-            if any(w in lower for w in ["thank", "thanks", "bye"]):
+            if re.search(r"\b(thanks|thank you|bye|goodbye)\b", lower):
                 send_reply(
                     sender,
-                    "You're welcome! Blessings always.\nOm Namo Venkateshaya! Visit https://svtempleco.org/"
+                    "You're welcome! Blessings always.\n"
+                    "Om Namo Venkateshaya! Visit https://svtempleco.org/"
                 )
                 return {"statusCode": 200}
 
