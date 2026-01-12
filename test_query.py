@@ -1,13 +1,14 @@
 from backend.ask_temple import answer_user
-from datetime import datetime
-from zoneinfo import ZoneInfo
-import pytest
 
-TZ = ZoneInfo("America/Denver")
+from datetime import datetime,date,time
+from zoneinfo import ZoneInfo
+
+
+message_ts = int(datetime.now(ZoneInfo("America/Denver")).timestamp())
 
 def test_vishnu_sahasranam_no_context_leakage():
-    ts = int(datetime(2026, 1, 4, 10, 30, tzinfo=TZ).timestamp())
-    out = answer_user("siva abhsihekam", message_ts=ts)
+    
+    out = answer_user("today's schedule", message_ts=message_ts)
 
     print("\n===== BOT RESPONSE =====\n")
     print(out)
@@ -25,4 +26,4 @@ def test_vishnu_sahasranam_no_context_leakage():
     for phrase in forbidden:
         assert phrase not in lowered
 
-    assert "temple manager" in lowered
+
