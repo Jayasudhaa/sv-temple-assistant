@@ -238,7 +238,8 @@ def handle_temple_hours(q: str, now: datetime) -> str | None:
         "presidents day",
         "president's day",
     ])
-
+    
+    # ---------------- FESTIVAL DETAILS ----------------
     # ---------------- TIME SLOTS ----------------
     full_day_slot = (time(9, 0), time(20, 0))
     weekday_morning = (time(9, 0), time(12, 0))
@@ -270,7 +271,8 @@ def handle_temple_hours(q: str, now: datetime) -> str | None:
         else "Weekend" if day_type == "weekend"
         else "Weekday"
     )
-
+    show_festival_hours_note = is_festival_day or is_holiday or is_festival_query or is_holiday_query
+    
     # ---------------- STATUS LOGIC ----------------
     if day_type in ["festival", "federal_holiday", "holiday_query", "weekend"]:
         if in_range(*full_day_slot):
@@ -286,6 +288,14 @@ def handle_temple_hours(q: str, now: datetime) -> str | None:
                 "• Hours: 9:00 AM – 8:00 PM",
                 "• Next opening: 9:00 AM",
             ]
+        if day_type in ["festival", "federal_holiday"]:
+            lines.append("• Temple is open from 9:00 AM – 8:00 PM on all major festivals and federal holidays")
+        if show_festival_hours_note:
+            lines.append(
+                "• Temple is open from 9:00 AM – 8:00 PM on all major festivals and federal holidays"
+    )
+
+
     else:
         # Weekday split hours
         if in_range(*weekday_morning) or in_range(*weekday_evening):
@@ -315,10 +325,7 @@ def handle_temple_hours(q: str, now: datetime) -> str | None:
     if festival_names:
         lines.extend(["", "🎉 Festival(s) Today:"])
         for f in festival_names:
-            lines.append(f"• {f}")
-
-   
-   
+            lines.append(f"• {f}") 
 
     return "\n".join(lines)
 
