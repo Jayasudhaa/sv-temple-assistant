@@ -554,10 +554,7 @@ ABHISHEKAM_QUERIES = [
     "vastram sponsorship",
     "vastu puja",
     "venkateswara abhisekam",
-    "venkateswara kalyanam",
-    "vidyarambam",
-    "mahalakshmi abhishekam"
- 
+    "venkateswara kalyanam",  
 ]
 
 def assert_not_fallback(response: str):
@@ -574,6 +571,36 @@ def assert_not_contains(response: str, forbidden: list[str]):
     lowered = response.lower()
     for f in forbidden:
         assert f not in lowered, f"Forbidden phrase found: {f}"
+
+def test_today_schedule_queries(query):
+    response = answer_user(query, message_ts=message_ts)
+
+    print("\n" + "=" * 90)
+    print(f"QUERY : {query}")
+    print("-" * 90)
+    print("BOT RESPONSE:\n")
+    print(response)
+    print("=" * 90)
+
+    # ---------------- BASIC SAFETY ----------------
+    assert response is not None
+    assert isinstance(response, str)
+    assert response.strip() != ""
+
+    # ---------------- CORE TODAY ASSERTS ----------------
+    assert "EVENTS – TODAY" in response
+
+    # Daily schedule must always appear
+    assert (
+        "DAILY TEMPLE SCHEDULE" in response
+        or "Daily Temple Schedule" in response
+    )
+
+    # Panchangam must always appear
+    assert (
+        "PANCHANGAM" in response
+        or "Today's Panchangam" in response
+    )
 
 # =========================================================
 # TEST

@@ -208,6 +208,7 @@ def handle_temple_hours(q: str, now: datetime) -> str | None:
     is_festival_query = any(w in q for w in [
         "festival",
         "ugadi",
+        "sankranthi"
         "yugadi",
         "rama navami",
         "ram navami",
@@ -272,6 +273,22 @@ def handle_temple_hours(q: str, now: datetime) -> str | None:
         else "Weekday"
     )
     show_festival_hours_note = is_festival_day or is_holiday or is_festival_query or is_holiday_query
+    if is_festival_query or is_holiday_query:
+        lines = [
+            "🕉️ FESTIVAL DAY TIMINGS",
+            "",
+            "• Temple is open from 9:00 AM – 8:00 PM on all major festivals and federal holidays",
+            "• Timings may vary based on special rituals",
+        ]
+
+        if festival_names:
+            lines.extend(["", "🎉 Festival(s):"])
+            for f in festival_names:
+                lines.append(f"• {f}")
+
+        return "\n".join(lines)
+
+
     
     # ---------------- STATUS LOGIC ----------------
     if day_type in ["festival", "federal_holiday", "holiday_query", "weekend"]:
@@ -288,12 +305,11 @@ def handle_temple_hours(q: str, now: datetime) -> str | None:
                 "• Hours: 9:00 AM – 8:00 PM",
                 "• Next opening: 9:00 AM",
             ]
-        if day_type in ["festival", "federal_holiday"]:
-            lines.append("• Temple is open from 9:00 AM – 8:00 PM on all major festivals and federal holidays")
-        if show_festival_hours_note:
+         # ✅ Append policy note ONCE
+        if day_type in ["festival", "federal_holiday"] or show_festival_hours_note:
             lines.append(
                 "• Temple is open from 9:00 AM – 8:00 PM on all major festivals and federal holidays"
-    )
+            )
 
 
     else:
@@ -323,7 +339,7 @@ def handle_temple_hours(q: str, now: datetime) -> str | None:
 
     # ---------------- FESTIVAL DETAILS ----------------
     if festival_names:
-        lines.extend(["", "🎉 Festival(s) Today:"])
+        lines.extend(["", "🎉 Festival:"])
         for f in festival_names:
             lines.append(f"• {f}") 
 
@@ -374,7 +390,8 @@ def handle_committee_queries(q: str, now: datetime) -> str | None:
     return None
 
 def handle_cultural_programs(q: str, now: datetime) -> str | None:
-    if not any(w in q for w in ["dance", "music", "bhajan", "concert", "performance", "cultural"]):
+    print("inside cultural",q)
+    if not any(w in q for w in ["dance", "music", "bhajan", "concert", "performance", "cultural","singing", "cultural programmes","cultural programs"]):
         return None
 
     return (

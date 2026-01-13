@@ -10,6 +10,27 @@ import re
 from difflib import get_close_matches
 from backend.items_catalog_query import ITEMS_REQUIRED
 
+INTENT_NORMALIZATION = {
+
+    # ---- TIME ALIASES ----
+    "tomo": "tomorrow",
+    "tmr": "tomorrow",
+    "tmrw": "tomorrow",
+    "tomorow": "tomorrow",
+    "tomo's" : "tomorrow",
+    "tomorrow's": "tomorrow",
+
+    "todays": "today",
+    "today's": "today",
+
+    # ---- COMMON TYPOS ----
+    "scheduel": "schedule",
+    "shedule": "schedule",
+    "hapening": "happening",
+    "happning": "happening",
+}
+
+
 
 
 def _sanitize(text: str) -> str:
@@ -83,11 +104,20 @@ TEMPLE_VOCAB = set(
 
 def normalize_intent(q: str) -> str:
     q = q.lower()
+
+    # 1️⃣ Token-level normalization (tomo → tomorrow, scheduel → schedule)
+    words = q.split()
+    words = [INTENT_NORMALIZATION.get(w, w) for w in words]
+    q = " ".join(words)
+
+    # 2️⃣ Phrase-level canonical intent normalization
     for canonical, variants in CANONICAL_INTENTS.items():
         for v in variants:
             if v in q:
-                return q.replace(v, canonical)
+                q = q.replace(v, canonical)
+
     return q
+
 
 def norm(q: str) -> str:
     return q.lower().strip()

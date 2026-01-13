@@ -1,11 +1,11 @@
 SPONSORSHIP_CATALOG = {
     
-    'abhishekam_andal_moola': {
-        'annual_fee': 1116,
-        'category': 'abhishekam',
-        'home_fee': None,
-        'name': 'Abhishekam Sri Andal (moola murthy) temple scheduled',
-        'temple_fee': 116
+    "abhishekam_andal_moola": {
+        "name": "Abhishekam Sri Andal (moola murthy) temple scheduled",
+        "category": "abhishekam",
+        "temple_fee": 116,
+        "annual_fee": 1116,
+        "home_fee": None,
     },
     'abhishekam_individual_general': {
         'annual_fee': None,
@@ -21,13 +21,14 @@ SPONSORSHIP_CATALOG = {
         'name': 'Abhishekam –Individual -for Kalyana Srinivasa, Sri Devi, and BhuDevi',
         'temple_fee': 151
     },
-    'abhishekam_mahalakshmi_moola': {
-        'annual_fee': 1116,
-        'category': 'abhishekam',
-        'home_fee': None,
-        'name': 'Abhishekam Sri Mahalakshmi (moola murthy) temple scheduled',
-        'temple_fee': 116
+     "abhishekam_mahalakshmi_moola": {
+        "name": "Abhishekam Sri Mahalakshmi (moola murthy) temple scheduled",
+        "category": "abhishekam",
+        "temple_fee": 116,
+        "annual_fee": 1116,
+        "home_fee": None,
     },
+
     'abhishekam_saamoohika_general': {
         'annual_fee': 501,
         'category': 'abhishekam',
@@ -35,12 +36,12 @@ SPONSORSHIP_CATALOG = {
         'name': 'Abhishekam –Saamoohika –for any one of the following deities -Shiva, Ganapathi, Murugan, Hanuman, Shirdi Sai Baba, Ragavendra –temple scheduled',
         'temple_fee': 51
     },
-    'abhishekam_venkateswara_moola': {
-        'annual_fee': 1501,
-        'category': 'abhishekam',
-        'home_fee': None,
-        'name': 'Abhishekam Venkateswara (moola murthy)–temple scheduled',
-        'temple_fee': 151
+    "abhishekam_venkateswara_moola": {
+        "name": "Abhishekam Venkateswara (moola murthy) – temple scheduled",
+        "category": "abhishekam",
+        "temple_fee": 151,
+        "annual_fee": 1501,
+        "home_fee": None,
     },
     'akshraabhyasam': {
         'annual_fee': None,

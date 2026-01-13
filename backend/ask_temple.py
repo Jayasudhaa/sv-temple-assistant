@@ -11,6 +11,8 @@ from enum import Enum
 from zoneinfo import ZoneInfo
 from datetime import date, timedelta
 from typing import Optional, List
+import calendar
+import re
 
 # ===============================
 # AWS / External
@@ -55,14 +57,91 @@ from backend.utility import (
 MAX_QUERY_LEN= 500
 
 time_words = [
-    "today", "tomorrow", "yesterday",
-    "this week", "next week", "last week",
-    "this month", "this year"
+
+    # -------- TODAY --------
+    "today",
+    "today's",
+    "todays",
+    "today schedule",
+    "today events",
+    "today at temple",
+
+    # -------- TOMORROW --------
+    "tomorrow",
+    "tomorrow's",
+    "tomorrows",
+    "tomorrow schedule",
+    "tomorrow events",
+    "tomo",
+    "tomo's events",
+    "tomo's activities",
+
+    # -------- YESTERDAY --------
+    "yesterday",
+    "yesterday's",
+    "yesterdays",
+
+    # -------- WEEK --------
+    "this week",
+    "next week",
+    "last week",
+    "coming week",
+    "upcoming week",
+    "following week",
+    "current week",
+
+    # -------- MONTH --------
+    "this month",
+    "next month",
+    "last month",
+    "upcoming month",
+    "current month",
+
+    # -------- YEAR --------
+    "this year",
+    "next year",
+    "last year",
 ]
 
+
 calendar_words = [
-    "event", "events", "schedule", "happening","whats happening", "what is happening", "what's happening"
-    "activity", "activities", "program", "programs"
+
+    # -------- EVENTS --------
+    "event",
+    "events",
+    "festival",
+    "festivals",
+
+    # -------- SCHEDULE --------
+    "schedule",
+    "timings",
+    "timing",
+    "time",
+    "program",
+    "programs",
+    "activity",
+    "activities",
+
+    # -------- HAPPENING --------
+    "happening",
+    "whats happening",
+    "what's happening",
+    "what is happening",
+    "what all is happening",
+
+    # -------- SPECIAL --------
+    "special",
+    "special events",
+    "today's special",
+    "todays special",
+
+    # -------- GENERIC USER PHRASES --------
+    "what's going on",
+    "whats going on",
+    "what is going on",
+    "anything today",
+    "anything special",
+    "anything happening",
 ]
 
 logger = logging.getLogger(__name__)
@@ -386,6 +465,38 @@ def classify_intent(q: str) -> Intent:
         "bring", "required", "need"
     ]):
         return Intent.HOMAM_ITEMS
+    
+     # ==================================================
+    # 🚗 VAHANA POOJA
+    # ==================================================
+    if any(w in q for w in ["vahana", "vehicle", "car pooja"]):
+        return Intent.VAHANA_POOJA
+
+    # ==================================================
+    # 📞 CONTACTS
+    # ==================================================
+    if any(w in q for w in [
+        "chairman", "president", "manager", "temple manager"
+        "secretary", "treasurer",
+        "phone", "email", "contact"
+    ]):
+        return Intent.CONTACTS
+
+    # ==================================================
+    # 👥 COMMITTEES
+    # ==================================================
+    if any(w in q for w in [
+        "committee", "committees", "board",
+        "trustee", "leadership", "executive committee"
+    ]):
+        return Intent.COMMITTEE
+
+    # ==================================================
+    # 🎶 CULTURAL
+    # ==================================================
+    if any(w in q for w in ["dance", "music", "bhajan", "concert", "cultural", "singing", "cultural programs","cultural programme"]):
+        return Intent.CULTURAL
+
 
     # ==================================================
     # 📖 STORY / SIGNIFICANCE (NO DATE WORDS)
@@ -473,20 +584,23 @@ def classify_intent(q: str) -> Intent:
     # ==================================================
     # 📅 EVENTS (GENERIC — TIME RESOLVED LATER)
     # ==================================================
-    if any(w in q for w in [
-        "event", "events", "festival", "festivals",
-        "schedule", "happening", "activities",
-        "program", "programs",
-        "this week", "next week", "coming week",
-        "upcoming", "upcoming week", "following week",
-        "this month", "next month"
-    ]) and not any(f in q for f in FOOD_KEYWORDS) and not any(w in q for w in [
+    if (
+    any(w in q for w in calendar_words)
+    and (
+        any(t in q for t in time_words)
+        or any(m.lower() in q for m in calendar.month_name if m)
+    )
+    and not any(f in q for f in FOOD_KEYWORDS)
+    and not any(w in q for w in [
         "daily pooja",
         "suprabhata",
         "nitya archana",
-        "archana"
-    ]):
+        "archana",
+    ])
+):
         return Intent.EVENTS
+
+
 
     # ==================================================
     # 🌅 DAILY POOJA / SUPRABHATA
@@ -500,37 +614,7 @@ def classify_intent(q: str) -> Intent:
     if "arjitha" in q:
         return Intent.ARJITHA_SEVA
 
-    # ==================================================
-    # 🚗 VAHANA POOJA
-    # ==================================================
-    if any(w in q for w in ["vahana", "vehicle", "car pooja"]):
-        return Intent.VAHANA_POOJA
-
-    # ==================================================
-    # 📞 CONTACTS
-    # ==================================================
-    if any(w in q for w in [
-        "chairman", "president", "manager",
-        "secretary", "treasurer",
-        "phone", "email", "contact"
-    ]):
-        return Intent.CONTACTS
-
-    # ==================================================
-    # 👥 COMMITTEES
-    # ==================================================
-    if any(w in q for w in [
-        "committee", "committees", "board",
-        "trustee", "leadership", "executive committee"
-    ]):
-        return Intent.COMMITTEE
-
-    # ==================================================
-    # 🎶 CULTURAL
-    # ==================================================
-    if any(w in q for w in ["dance", "music", "bhajan", "concert", "cultural"]):
-        return Intent.CULTURAL
-
+   
     # ==================================================
     # 🤖 FALLBACK (RAG)
     # ==================================================
@@ -538,6 +622,18 @@ def classify_intent(q: str) -> Intent:
 
 def is_weekend_day(dt: datetime) -> bool:
     return dt.weekday() >= 5   # 5 = Saturday, 6 = Sunday
+
+def ensure_event_time(q: str) -> str:
+    # Do NOT force today if month/year is already specified
+    if any(m.lower() in q for m in calendar.month_name if m):
+        return q
+    if re.search(r"\b20\d{2}\b", q):
+        return q
+    if any(t in q for t in time_words):
+        return q
+    return q + " today"
+
+
 
 def answer_user(
     query: str,
@@ -555,13 +651,21 @@ def answer_user(
         return "Please provide a valid question."
 
     # ------------------ NORMALIZATION ------------------
-    q = normalize_intent(
-        autocorrect_query(
-            normalize_query(query.strip()[:MAX_QUERY_LEN])
-        )
-    )
+    q = normalize_query(query.strip()[:MAX_QUERY_LEN])
+    q = autocorrect_query(q)
+    q = normalize_intent(q)
 
-    intent = classify_intent(q)
+    print("after normalization",q)
+    print("[DEBUG-NORM]", q)
+
+    intent = classify_intent(q)   # ✅ FIRST classify
+    if intent == Intent.EVENTS and not any(
+    m.lower() in q for m in calendar.month_name if m
+):
+        q = ensure_event_time(q)
+
+    
+
 
     print(f"[DEBUG] INTENT={intent.name} | QUERY='{q}' | NOW={now.date()}")
 
@@ -596,40 +700,74 @@ def answer_user(
             q
         )
 
-
     # ------------------ EVENT HANDLING (SINGLE ENTRY) ------------------
     result = handle_calendar_events(q, now)
 
-    print("result",result)
-   
-    if (
-    intent == Intent.EVENTS
-    and result
-    and "📅 EVENTS – TODAY" in result
-    and "No special events scheduled" in result
-):
-        blocks = ["📅 EVENTS – TODAY"]
+    if intent == Intent.EVENTS:
+        result = handle_calendar_events(q, now)
+        print("result", result)
 
-        # DAILY BASELINE
-        daily = handle_daily_pooja("daily pooja", now)
-        if daily:
-            blocks.append(daily)
-
-        panchang = handle_panchang("panchang today", now)
-        if panchang:
-            blocks.append(panchang)
-
-        # 🍽️ ANNADANAM INFO (INFORMATIONAL ONLY)
-        is_weekend = is_weekend_day(now)
-        print("is weekend",is_weekend)
-        if not is_weekend:
-            blocks.append(
-                "🍽️ ANNADANAM\n"
-                f"• No Annadanam today ({now.strftime('%A')})\n"
-                "• Served on Saturdays & Sundays only"
+        if not result:
+            return finalize(
+                "• No special events scheduled.",
+                q
             )
 
-        return finalize("\n\n".join(blocks), q)
+        # ---------- TODAY ----------
+        if "📅 EVENTS – TODAY" in result and "today" in q:
+
+            blocks = [result]
+
+            daily = handle_daily_pooja("daily pooja", now)
+            if daily:
+                blocks.append(daily)
+
+            panchang = handle_panchang("panchang today", now)
+            if panchang:
+                blocks.append(panchang)
+
+            if not is_weekend_day(now):
+                blocks.append(
+                    "🍽️ ANNADANAM\n"
+                    f"• No Annadanam today ({now.strftime('%A')})\n"
+                    "• Served on Saturdays & Sundays only"
+                )
+
+            return finalize("\n\n".join(blocks), q)
+
+        # ---------- TOMORROW ----------
+        if "📅 EVENTS – TOMORROW" in result and "tomorrow" in q:
+            blocks = [result]
+
+            # 1️⃣ Tomorrow Panchang (reuse existing logic)
+            panchang = handle_panchang("panchang tomorrow", now)
+            if panchang:
+                blocks.append(panchang)
+
+            # Reuse existing temple hours logic
+            tomorrow_now = now + timedelta(days=1)
+            hours = handle_temple_hours("temple hours", tomorrow_now)
+
+            if hours:
+                blocks.append(hours)
+
+            if not is_weekend_day(tomorrow_now):
+                blocks.append(
+                    "🍽️ ANNADANAM\n"
+                    f"• No Annadanam tomorrow ({tomorrow_now.strftime('%A')})\n"
+                    "• Served on Saturdays & Sundays only"
+                )
+
+
+            return finalize("\n\n".join(blocks), q)
+            
+
+    # -------- WEEK / MONTH / OTHER --------
+        # ---------- MONTH / YEAR ----------
+    if any(m.lower() in q for m in calendar.month_name if m) or "month" in q:
+        return finalize(result, q)
+
+
     
     # ------------------ MONTHLY SCHEDULE (COMPOSED VIEW) ------------------
     if (

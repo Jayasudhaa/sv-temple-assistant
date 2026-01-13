@@ -6,11 +6,32 @@ from backend.calender_2026 import CALENDAR_2026
 from backend.get_timing import extract_weekly_pattern
 from backend.sponsorship_catalog import SPONSORSHIP_CATALOG
 
+def norm(text: str) -> str:
+    return (
+        text.lower()
+        .replace("–", "-")
+        .replace("—", "-")
+        .strip()
+    )
+
+
+DEITY_ALIASES = {
+    "venkateswara": ["venkateswara", "kalyanotsavam"],
+    "goda": ["goda", "andal"],
+    "meenakshi": ["meenakshi"],
+    "tulasi": ["tulasi"],
+}
+
 
 HUMAN_WEDDING_KEYWORDS = [
     "marriage", "wedding", "bride", "groom",
     "human", "can we do wedding", "hindu wedding"
 ]
+
+def add_fee(label, value):
+    if value is not None:
+        return f"  – {label}: ${value}"
+    return None
 
 def handle_kalyanam(q: str, now: datetime) -> Optional[str]:
     q = q.lower()
@@ -19,7 +40,7 @@ def handle_kalyanam(q: str, now: datetime) -> Optional[str]:
         return None
 
     # --------------------------------------------------
-    # HUMAN WEDDING CHECK (STRICT SEPARATION)
+    # HUMAN WEDDING CHECK (STRICT)
     # --------------------------------------------------
     if any(k in q for k in HUMAN_WEDDING_KEYWORDS):
         return (
@@ -27,11 +48,11 @@ def handle_kalyanam(q: str, now: datetime) -> Optional[str]:
             "• A Hindu wedding (Vivaha) is a sacred samskara performed for individuals\n"
             "• It is traditionally conducted by family priests at homes or wedding venues\n"
             "• The temple does not perform human wedding ceremonies\n"
-            "• For spiritual guidance or priest services, please contact the Temple Manager"
+            "• For priest services, please contact the Temple Manager"
         )
 
     # --------------------------------------------------
-    # DETERMINE WHICH KALYANAM USER MEANS
+    # DETERMINE DEITY
     # --------------------------------------------------
     deity_key = "venkateswara"
     title = "🪔 Sri Venkateswara Swamy Kalyanam"
@@ -49,20 +70,20 @@ def handle_kalyanam(q: str, now: datetime) -> Optional[str]:
     lines = [title, ""]
 
     # --------------------------------------------------
-    # DESCRIPTION (ONLY FOR VENKATESWARA)
+    # DESCRIPTION (VENKATESWARA ONLY)
     # --------------------------------------------------
     if deity_key == "venkateswara" and any(
-        w in q for w in ["everything", "about", "details", "explain", "tell me"]
+        w in q for w in ["about", "details", "explain", "tell me"]
     ):
         lines.extend([
-            "• Kalyanam is the divine celestial wedding of Lord Venkateswara with Sri Devi and Bhu Devi",
-            "• It is performed as an arjitha seva for the well-being of devotees and families",
-            "• The ceremony includes sankalpam, mangalya dharanam, and Vedic chants",
+            "• Kalyanam is the divine celestial wedding of Lord Venkateswara",
+            "• It is performed as an arjitha seva for family well-being",
+            "• The ceremony includes sankalpam and Vedic chants",
             ""
         ])
 
     # --------------------------------------------------
-    # WEEKLY RECURRENCE (ONLY FOR VENKATESWARA)
+    # WEEKLY SCHEDULE (VENKATESWARA ONLY)
     # --------------------------------------------------
     if deity_key == "venkateswara":
         wk_key = "venkateswara swamy kalyanam"
@@ -74,7 +95,7 @@ def handle_kalyanam(q: str, now: datetime) -> Optional[str]:
             ])
 
     # --------------------------------------------------
-    # CALENDAR 2026 DATES (DEITY-SPECIFIC)
+    # CALENDAR 2026 UPCOMING DATES
     # --------------------------------------------------
     upcoming = []
 
@@ -116,23 +137,27 @@ def handle_kalyanam(q: str, now: datetime) -> Optional[str]:
         lines.append("• No upcoming Kalyanam dates listed.")
 
     # --------------------------------------------------
-    # SPONSORSHIP (FILTERED BY DEITY NAME)
+    # SPONSORSHIP (CORRECT + ROBUST)
     # --------------------------------------------------
+    aliases = DEITY_ALIASES.get(deity_key, [])
+
     sponsorships = [
         s for s in SPONSORSHIP_CATALOG.values()
-        if "kalyanam" in s.get("name", "").lower()
-        and deity_key in s.get("name", "").lower()
+        if s.get("category") == "kalyanam"
+        and any(a in norm(s.get("name", "")) for a in aliases)
     ]
 
     if sponsorships:
         lines.extend(["", "💰 Sponsorship"])
         for s in sponsorships:
             lines.append(f"• {s['name']}")
-            if s.get("temple_fee"):
-                lines.append(f"  – Temple: ${s['temple_fee']}")
-            if s.get("home_fee"):
-                lines.append(f"  – Home: ${s['home_fee']}")
-            if s.get("annual_fee"):
-                lines.append(f"  – Annual: ${s['annual_fee']}")
+
+            for fee_line in [
+                add_fee("Temple", s.get("temple_fee")),
+                add_fee("Home", s.get("home_fee")),
+                add_fee("Annual", s.get("annual_fee")),
+            ]:
+                if fee_line:
+                    lines.append(fee_line)
 
     return "\n".join(lines)
