@@ -1,7 +1,7 @@
 #backend/get_timing.py
 # 
-from datetime import date,time
-from zoneinfo import ZoneInfo
+from datetime import date
+
 
 import calendar
 from datetime import datetime, timedelta,date
@@ -15,6 +15,7 @@ from backend.calender_2026 import CALENDAR_2026
 from backend.federal_holidays import get_federal_holidays,nth_weekday_of_month
 from backend.sponsorship_catalog import SPONSORSHIP_CATALOG
 from backend.constants import WEEKLY_EVENTS
+
 
 # ============================================================
 # DATA ACCESS (CALENDAR + HOLIDAYS)
@@ -179,22 +180,83 @@ def parse_explicit_date(q: str, now: datetime) -> datetime | None:
 
     return None
 
-def next_week_range(now: datetime) -> tuple[date, date]:
-    today = now.date()
-
-    # End of THIS week (Sunday)
-    days_to_sunday = 6 - today.weekday()
-    this_week_end = today + timedelta(days=days_to_sunday)
-
-    # Next week = Monday → Sunday
-    start = this_week_end + timedelta(days=1)
-    end = start + timedelta(days=6)
-
-    return start, end
-
 # ============================================================
 # FORMATTERS
 # ============================================================
+def resolve_date_range(q: str, now: datetime) -> tuple[list[datetime], str] | None:
+    q = q.lower()
+    today = now.date()
+
+    # ---------- EXPLICIT DATE ----------
+    explicit = parse_explicit_date(q, now)
+    if explicit:
+        return [explicit], explicit.strftime("%B %d, %Y")
+    
+    # ---------- WHAT'S HAPPENING / NOW ----------
+    if any(p in q for p in [
+        "what's happening",
+        "whats happening",
+        "what is happening",
+        "happening now",
+        "happening today"
+    ]):
+        return [now], "TODAY"
+
+    # ---------- TODAY / TOMORROW ----------
+    if "today" in q:
+        return [now], "TODAY"
+
+    if "tomorrow" in q:
+        return [now + timedelta(days=1)], "TOMORROW"
+
+    # ---------- WEEK ----------
+    # ---------- UPCOMING / NEXT WEEK ----------
+    if any(w in q for w in ["upcoming", "coming", "upcoming activities", "upcoming events"]):
+        start = today
+        end = today + timedelta(days=7)
+        label = f"UPCOMING ({start:%b %d} – {end:%b %d, %Y})"
+
+    elif "next week" in q or "following week" in q:
+        start = today + timedelta(days=(7 - today.weekday()))
+        end = start + timedelta(days=6)
+        label = f"NEXT WEEK ({start:%b %d} – {end:%b %d, %Y})"
+
+
+    elif "this week" in q or "week" in q:
+            start = today - timedelta(days=today.weekday())
+            end = start + timedelta(days=6)
+            label = f"THIS WEEK ({start:%b %d} – {end:%b %d})"
+
+    # ---------- MONTH ----------
+    elif "this month" in q:
+        start = date(today.year, today.month, 1)
+        end = date(today.year, today.month, calendar.monthrange(today.year, today.month)[1])
+        label = today.strftime("%B").upper()
+
+    elif any(m.lower() in q for m in calendar.month_name if m):
+        month = next(m for m in calendar.month_name if m and m.lower() in q)
+        month_num = list(calendar.month_name).index(month)
+        year = extract_year(q, now)
+        start = date(year, month_num, 1)
+        end = date(year, month_num, calendar.monthrange(year, month_num)[1])
+        label = f"{month.upper()} {year}"
+
+    # ---------- YEAR ----------
+    elif "this year" in q or re.search(r"\b20\d{2}\b", q):
+        year = extract_year(q, now)
+        start = date(year, 1, 1)
+        end = date(year, 12, 31)
+        label = f"YEAR {year}"
+
+    else:
+        return None
+   
+    dates = [
+        datetime.combine(start + timedelta(days=i), now.time(), tzinfo=now.tzinfo)
+        for i in range((end - start).days + 1)
+    ]
+    print(f"[DEBUG] DATE RANGE RESOLVED → {label}")
+    return dates, label
 
 def format_events(events: dict) -> list[str]:
     lines = []
@@ -219,134 +281,54 @@ def handle_calendar_events(q: str, now: datetime) -> str | None:
     q = q.lower()
     is_festival_query = "festival" in q or "festivals" in q
 
-    # ---------------- FESTIVAL NAME SEARCH ----------------
-    festival_name_match = None
-    for month, days in CALENDAR_2026.items():
-        for day, info in days.items():
-            for fest in info.get("festival", []):
-                if fest.lower() in q:
-                    festival_name_match = fest
-                    dates = [
-                        datetime(2026, list(calendar.month_name).index(month.capitalize()), day, tzinfo=now.tzinfo)
-                    ]
-                    label = fest.upper()
-                    break
+    # ==================================================
+    # 🎉 FESTIVALS – FULL YEAR (NO DATE REQUIRED)
+    # ==================================================
+    if is_festival_query and not any(w in q for w in [
+        "today", "this", "next", "last", "week", "month", "year"
+    ]):
+        lines = ["🎉 TEMPLE FESTIVALS – 2026", ""]
+        found = False
 
+        for month, days in CALENDAR_2026.items():
+            for day, info in days.items():
+                if "festival" in info:
+                    for name in info["festival"]:
+                        found = True
+                        lines.append(
+                            f"• {name} — {month.capitalize()} {day}, 2026"
+                        )
 
-    explicit = parse_explicit_date(q, now)
-    if explicit:
-        dates = [explicit]
-        label = explicit.strftime("%B %d, %Y")
-
-    else:
-        # ---------------- RELATIVE DAY ----------------
-        if "today" in q:
-            dates = [now]
-            label = "TODAY"
-
-        elif "tomorrow" in q:
-            dates = [now + timedelta(days=1)]
-            label = "TOMORROW"
-
-        elif "yesterday" in q:
-            dates = [now - timedelta(days=1)]
-            label = "YESTERDAY"
-
-        # ---------------- WEEK ----------------
-        elif "next week" in q:
-            start, end = next_week_range(now)
-            dates = [
-                datetime.combine(start + timedelta(days=i), now.time(), tzinfo=now.tzinfo)
-                for i in range((end - start).days + 1)
-            ]
-            label = f"NEXT WEEK ({start:%b %d} – {end:%b %d, %Y})"
-
-        elif "last week" in q:
-            today = now.date()
-            start = today - timedelta(days=today.weekday() + 7)
-            end = start + timedelta(days=6)
-            dates = [
-                datetime.combine(start + timedelta(days=i), now.time(), tzinfo=now.tzinfo)
-                for i in range(7)
-            ]
-            label = f"LAST WEEK ({start:%b %d} – {end:%b %d, %Y})"
-
-        elif "this week" in q or "week" in q:
-            start = now
-            end = now + timedelta(days=(6 - now.weekday()))
-            dates = []
-            d = start
-            while d <= end:
-                dates.append(d)
-                d += timedelta(days=1)
-            label = f"THIS WEEK ({start:%b %d} – {end:%b %d})"
-
-
-        # ---------------- MONTH ----------------
-        elif "this month" in q:
-            dates = [
-                datetime(now.year, now.month, d, tzinfo=now.tzinfo)
-                for d in range(1, calendar.monthrange(now.year, now.month)[1] + 1)
-            ]
-            label = now.strftime("%B").upper()
-
-        elif any(m.lower() in q for m in calendar.month_name if m):
-            month = next(m for m in calendar.month_name if m and m.lower() in q)
-            month_num = list(calendar.month_name).index(month)
-
-            year_match = re.search(r"\b(20\d{2})\b", q)
-            year = int(year_match.group(1)) if year_match else now.year
-
-            dates = [
-                datetime(year, month_num, d, tzinfo=now.tzinfo)
-                for d in range(1, calendar.monthrange(year, month_num)[1] + 1)
-            ]
-            label = f"{month.upper()} {year}"
-
-        # ---------------- YEAR ----------------
-        elif "this year" in q or re.search(r"\b20\d{2}\b", q):
-            year_match = re.search(r"\b(20\d{2})\b", q)
-            year = int(year_match.group(1)) if year_match else now.year
-
-            dates = [
-                datetime(year, m, d, tzinfo=now.tzinfo)
-                for m in range(1, 13)
-                for d in range(1, calendar.monthrange(year, m)[1] + 1)
-            ]
-            label = f"YEAR {year}"
-        # ---------------- FESTIVAL DEFAULT (NO DATE GIVEN) ----------------
-        elif is_festival_query:
-            dates = [
-                datetime(now.year, now.month, d, tzinfo=now.tzinfo)
-                for d in range(1, calendar.monthrange(now.year, now.month)[1] + 1)
-            ]
-            label = f"{now.strftime('%B').upper()} (FESTIVALS)"    
-
-        else:
+        if not found:
             return None
 
-    # ---------------- COLLECT EVENTS ----------------
+        return "\n".join(lines)
+
+    # ==================================================
+    # 📅 DATE-BASED EVENTS (TODAY / WEEK / MONTH)
+    # ==================================================
+    resolved = resolve_date_range(q, now)
+    if not resolved:
+        return None
+
+    dates, label = resolved
     lines = [f"📅 EVENTS – {label}", ""]
     found = False
 
     for d in dates:
-        # ✅ CRITICAL FIX: skip past dates
-        # ✅ skip past dates ONLY for relative-day queries
-        if any(w in q for w in ["today", "tomorrow", "next week"]) and d.date() < now.date():
+        # Skip past dates ONLY for forward-looking queries
+        if d.date() < now.date() and not any(w in q for w in ["last", "previous", "yesterday"]):
             continue
 
-
         events = get_calendar_events(d)
-
         if not events:
             continue
 
         # Festival-only filtering
-        filtered_events = {}
-
         if is_festival_query:
-            if "festival" in events:
-                filtered_events["festival"] = events["festival"]
+            if "festival" not in events:
+                continue
+            filtered_events = {"festival": events["festival"]}
         else:
             filtered_events = events
 
@@ -358,11 +340,11 @@ def handle_calendar_events(q: str, now: datetime) -> str | None:
         lines.extend(format_events(filtered_events))
         lines.append("")
 
-
     if not found:
         lines.append("• No special events scheduled.")
 
     return "\n".join(lines)
+
 
 
 def handle_nth_weekday(q: str, now: datetime) -> str | None:
@@ -423,15 +405,15 @@ def get_calendar_abhishekam_dates(
     end_date: date | None = None
 ) -> list[str]:
 
-    results = []
-    today = now.date()
-    year = now.year
+    results: list[date] = []
 
-    # DEFAULT RANGE = today → end of year
+    CAL_YEAR = 2026  # 🔒 calendar truth source
+    today = now.date()
+
     if start_date is None:
         start_date = today
     if end_date is None:
-        end_date = date(year, 12, 31)
+        end_date = date(CAL_YEAR, 12, 31)
 
     month_index = {
         m.lower(): i + 1 for i, m in enumerate(CALENDAR_2026.keys())
@@ -441,29 +423,31 @@ def get_calendar_abhishekam_dates(
         month_num = month_index[month.lower()]
 
         for day, info in days.items():
-            abhishekams = info.get("abhishekam", [])
+            for event in info.get("abhishekam", []):
 
-            for event in abhishekams:
                 if deity and deity.lower() not in event.lower():
                     continue
 
                 try:
-                    event_day = date(year, month_num, day)
+                    event_day = date(CAL_YEAR, month_num, day)
                 except ValueError:
                     continue
 
-                # ✅ RANGE FILTER (FIXES OLD DATES + WEEK ISSUES)
+                # ✅ HARD FILTER
+                if event_day < today:
+                    continue
                 if not (start_date <= event_day <= end_date):
                     continue
 
                 results.append(event_day)
 
-    results.sort()
+    results = sorted(set(results))  # ✅ dedupe + sort
 
     return [
         d.strftime("%B %d, %Y")
         for d in results[:limit]
     ]
+
 
 def get_abhishekam_sponsorships(deity: Optional[str]) -> List[dict]:
     results = []
@@ -497,23 +481,16 @@ def get_vastra_samarpanam_for_deity(deity: str) -> List[dict]:
     return results
 
 def handle_abhishekam(q: str, now: datetime) -> Optional[str]:
-    if "abhishekam" not in q.lower():
+    q = q.lower()
+    if "abhishekam" not in q:
         return None
 
     deity = extract_deity(q)
-    year = now.year
 
-    title = (
-        f"🪔 {deity.title()} Abhishekam"
-        if deity else
-        "🪔 Abhishekam Schedule"
-    )
-
+    title = f"🪔 {deity.title()} Abhishekam" if deity else "🪔 Abhishekam Schedule"
     lines = [title, ""]
 
-    # --------------------------------------------------
-    # WEEKLY RECURRENCE
-    # --------------------------------------------------
+    # ---------------- WEEKLY RECURRENCE ----------------
     WEEKLY_KEY_MAP = {
         "venkateswara": "venkateswara swamy abhishekam",
         "andal": "andal abhishekam",
@@ -529,49 +506,35 @@ def handle_abhishekam(q: str, now: datetime) -> Optional[str]:
     wk_key = WEEKLY_KEY_MAP.get(deity)
     if wk_key and wk_key in WEEKLY_EVENTS:
         lines.extend([
-            "📌 Schedule",
+            "📌 Weekly Schedule",
             f"• Happens every {extract_weekly_pattern(WEEKLY_EVENTS[wk_key])}",
             ""
         ])
-    # --- MONTH FILTER (if mentioned in query) ---
-    month = None
+
+    # ---------------- MONTH FILTER ----------------
+    start_date = end_date = None
     for i, m in enumerate(calendar.month_name):
         if m and m.lower() in q:
-            month = i
+            start_date = date(2026, i, 1)
+            end_date = date(2026, i, calendar.monthrange(2026, i)[1])
             break
 
-    start_date = None
-    end_date = None
-
-    if month:
-        year = now.year
-        start_date = date(year, month, 1)
-        end_date = date(year, month, calendar.monthrange(year, month)[1])
-
-    # --------------------------------------------------
-    # CALENDAR DATES (NEXT 2)
-    # --------------------------------------------------
+    # ---------------- UPCOMING DATES ----------------
     dates = get_calendar_abhishekam_dates(
-    deity,
-    now,
-    start_date=start_date,
-    end_date=end_date
-)
-
-
+        deity=deity,
+        now=now,
+        start_date=start_date,
+        end_date=end_date
+    )
 
     lines.append("📅 Upcoming Dates")
     if dates:
-        for d in dates:
-            lines.append(f"• {d}")
+        lines.extend(f"• {d}" for d in dates)
     else:
-        lines.append("• No Abhishekam dates listed in the calendar.")
+        lines.append("• No Abhishekam dates listed.")
 
-    # --------------------------------------------------
-    # SPONSORSHIP
-    # --------------------------------------------------
+    # ---------------- SPONSORSHIP ----------------
     sponsorships = get_abhishekam_sponsorships(deity)
-
     if sponsorships:
         lines.extend(["", "💰 Sponsorship"])
         for s in sponsorships:
@@ -583,12 +546,9 @@ def handle_abhishekam(q: str, now: datetime) -> Optional[str]:
             if s.get("annual_fee"):
                 lines.append(f"  – Annual: ${s['annual_fee']}")
 
-    # --------------------------------------------------
-    # VASTRA SAMARPANAM (MAIN DEITIES ONLY)
-    # --------------------------------------------------
+    # ---------------- VASTRA SAMARPANAM ----------------
     if deity in {"venkateswara", "andal", "mahalakshmi"}:
         vastras = get_vastra_samarpanam_for_deity(deity)
-
         if vastras:
             lines.extend(["", "🧵 Vastra Samarpanam"])
             for v in vastras:
@@ -597,4 +557,3 @@ def handle_abhishekam(q: str, now: datetime) -> Optional[str]:
                     lines.append(f"  – Sponsorship: ${v['temple_fee']}")
 
     return "\n".join(lines)
-

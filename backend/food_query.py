@@ -3,14 +3,22 @@ from backend.temple_info_query import TEMPLE_INFO
 from backend.federal_holidays import observe_if_weekend
 from backend.sponsorship_catalog import SPONSORSHIP_CATALOG
 
+FOOD_KEYWORDS = {
+    "annadanam",
+    "anna danam",
+    "food",
+    "cafeteria",
+    "lunch",
+    "meal",
+    "prasadam",
+}
+
 
 def handle_food(q: str, now: datetime) -> str | None:
     q = q.lower()
-    day = now.strftime("%A")
-    is_weekend = observe_if_weekend(now)
 
     # -------------------------------------------------
-    # ANNADANAM / FOOD SPONSORSHIP
+    # 1️⃣ ANNADANAM / FOOD SPONSORSHIP (HIGHEST PRIORITY)
     # -------------------------------------------------
     if any(w in q for w in [
         "annadanam sponsor",
@@ -19,12 +27,9 @@ def handle_food(q: str, now: datetime) -> str | None:
         "annadanam amount",
         "annadanam donation",
         "food sponsorship",
-        "anna danam"
+        "anna danam sponsor",
     ]):
-        lines = [
-            "🍽️ ANNADANAM SPONSORSHIP",
-            ""
-        ]
+        lines = ["🍽️ ANNADANAM SPONSORSHIP", ""]
 
         for item in SPONSORSHIP_CATALOG.values():
             if item.get("category") == "annadanam":
@@ -36,20 +41,20 @@ def handle_food(q: str, now: datetime) -> str | None:
             "",
             "📞 For coordination and booking:",
             f"• {TEMPLE_INFO['contacts']['catering']}",
-            "• Managed by the Annapoorna Committee"
+            "• Managed by the Annapoorna Committee",
         ])
 
         return "\n".join(lines)
 
     # -------------------------------------------------
-    # CATERING / ANNAPOORNA COMMITTEE
+    # 2️⃣ CATERING / ANNAPOORNA COMMITTEE
     # -------------------------------------------------
     if any(w in q for w in [
         "catering",
         "catering service",
         "catering contact",
         "annapoorna",
-        "annapurna"
+        "annapurna",
     ]):
         return (
             "🍽️ ANNADANAM & CATERING SERVICES\n\n"
@@ -60,32 +65,26 @@ def handle_food(q: str, now: datetime) -> str | None:
         )
 
     # -------------------------------------------------
-    # PRASADAM
+    # 3️⃣ PRASADAM
     # -------------------------------------------------
     if "prasadam" in q:
         return (
             "🍛 PRASADAM\n\n"
-            "• Prasadam is available during temple poojas\n"
-            "• Availability depends on the pooja schedule"
+            "• Prasadam is distributed during temple poojas\n"
+            "• Availability depends on pooja schedule"
         )
 
     # -------------------------------------------------
-    # ANNADANAM / CAFETERIA / MEALS
+    # 4️⃣ ANNADANAM – GENERAL INFO ONLY (NO DATES)
     # -------------------------------------------------
-    if any(w in q for w in ["annadanam", "cafeteria", "food", "lunch", "meal"]):
-        if is_weekend:
-            return (
-                "🍽️ ANNADANAM (TEMPLE CAFETERIA)\n\n"
-                "• Available today\n"
-                "• Serving time: 12:00 PM – 2:00 PM\n"
-                "• Traditional vegetarian meals are served"
-            )
-        else:
-            return (
-                f"🍽️ ANNADANAM\n\n"
-                f"• Not available today ({day})\n"
-                "• Served on Saturdays & Sundays only\n"
-                "• Serving time: 12:00 PM – 2:00 PM"
-            )
+    if any(w in q for w in ["annadanam", "cafeteria", "food", "lunch", "meal", "annadanam today"]):
+        return (
+            "🍽️ ANNADANAM\n\n"
+            "• Annadanam is distributed on Saturdays & Sundays\n"
+            "• Serving time: 12:00 PM – 2:00 PM\n"
+            "• Traditional vegetarian meals are served\n"
+            "• Managed by the Annapoorna Committee"
+        )
 
     return None
+

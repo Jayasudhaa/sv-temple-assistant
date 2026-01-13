@@ -560,6 +560,21 @@ ABHISHEKAM_QUERIES = [
  
 ]
 
+def assert_not_fallback(response: str):
+    assert "I don’t have specific information" not in response
+    assert "No special events scheduled" not in response
+
+
+def assert_contains_any(response: str, keywords: list[str]):
+    lowered = response.lower()
+    assert any(k in lowered for k in keywords), f"Expected one of {keywords}"
+
+
+def assert_not_contains(response: str, forbidden: list[str]):
+    lowered = response.lower()
+    for f in forbidden:
+        assert f not in lowered, f"Forbidden phrase found: {f}"
+
 # =========================================================
 # TEST
 # =========================================================
@@ -577,3 +592,109 @@ def test_abhishekam_bot_responses(query):
 
     # Only ensure bot doesn't crash
     assert response is not None
+
+# =========================================================
+# ASSERTION HELPERS
+# =========================================================
+
+def assert_not_empty(resp: str):
+    assert resp and resp.strip(), "Empty response returned"
+
+
+def assert_not_generic_fallback(resp: str):
+    forbidden = [
+        "i don’t have specific information",
+        "i don't have specific information",
+        "unable to find",
+    ]
+    for f in forbidden:
+        assert f not in resp.lower(), f"Generic fallback used: {f}"
+
+
+def assert_contains_any(resp: str, words: list[str]):
+    text = resp.lower()
+    assert any(w in text for w in words), f"Expected one of {words}"
+
+
+# =========================================================
+# DOMAIN ASSERTIONS
+# =========================================================
+
+def assert_abhishekam(resp: str):
+    assert_contains_any(resp, ["abhishekam"])
+    assert_not_generic_fallback(resp)
+
+
+def assert_kalyanam(resp: str):
+    assert_contains_any(resp, ["kalyanam"])
+    assert_not_generic_fallback(resp)
+
+
+def assert_satyanarayana(resp: str):
+    assert_contains_any(resp, ["satyanarayana"])
+    assert "temple status" not in resp.lower()
+
+
+def assert_events(resp: str):
+    if "no special events" in resp.lower():
+        # Must include daily pooja or panchang fallback
+        assert_contains_any(resp, ["daily pooja", "panchang"])
+    else:
+        assert_contains_any(resp, ["event", "pooja", "festival"])
+
+
+def assert_food(resp: str):
+    assert_contains_any(resp, ["annadanam", "food"])
+
+
+def assert_items(resp: str):
+    assert_contains_any(resp, ["items", "samagri", "bring"])
+
+
+def assert_hours(resp: str):
+    assert_contains_any(resp, ["temple status", "hours", "open", "closed"])
+
+
+# =========================================================
+# MAIN TEST
+# =========================================================
+
+@pytest.mark.parametrize("query", ABHISHEKAM_QUERIES)
+def test_bot_responses(query):
+    resp = answer_user(query, message_ts=message_ts)
+
+    print("\n" + "=" * 100)
+    print("QUERY:", query)
+    print("-" * 100)
+    print(resp)
+    print("=" * 100)
+
+    assert_not_empty(resp)
+
+    q = query.lower()
+
+    if "abhishekam" in q or "abishek" in q:
+        assert_abhishekam(resp)
+
+    elif "kalyanam" in q:
+        assert_kalyanam(resp)
+
+    elif "satyanarayana" in q:
+        assert_satyanarayana(resp)
+
+    elif any(w in q for w in ["event", "events", "happening", "activities"]):
+        assert_events(resp)
+
+    elif any(w in q for w in ["annadanam", "food", "cafeteria"]):
+        assert_food(resp)
+
+    elif any(w in q for w in ["item", "samagri", "bring"]):
+        assert_items(resp)
+
+    elif any(w in q for w in ["open", "close", "hours", "timing"]):
+        if "satyanarayana" not in q:
+            assert_hours(resp)
+
+    else:
+        # Unknown queries must still not hard-fail
+        assert_not_generic_fallback(resp)

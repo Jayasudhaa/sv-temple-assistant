@@ -203,7 +203,22 @@ CANONICAL_INTENTS = {
 
 DAILY_SCHEDULE = [
     "09:00 AM – Sri Venkateswara Suprabhata Seva",
-    "10:00 AM – Sri Venkateswara Nitya Archana"
+    "10:00 AM – Sri Venkateswara Nitya Archana",
+    "06:30 PM – Archana and Deeparadhana",
+    "07:30 PM – Ekantha Seva"
+
+]
+
+MONTHLY_SCHEDULE = [
+    "1st Saturday – Sri Venkateswara Abhishekam",
+    "1st Sunday – Siva Abhishekam",
+    "2nd Saturday – Sri Venkateswara Kalyanam",
+    "2nd Sunday – Sri Ganapthi/Murugan Abhishekam",
+    "1st Saturday – Sri Venkateswara Abhishekam",
+    "3rd Friday – Sri Andal Abhishekam",
+    "3rd Saturday – Sri Mahalakshmi Abhishekam",
+    "4th Saturday – Sri Hanuman Abhishekam",
+    "4th Sunday – Sudarshana Homam",
 ]
 
 GLOBAL_NORMALIZATION_MAP = {
@@ -262,6 +277,7 @@ GLOBAL_NORMALIZATION_MAP = {
     "godadevi": "andal",
     "kodai": "andal",
     "andal": "andal",
+    "godha": "goda",
 
     # ✅ TULASI
     "tulasi": "tulasi",
@@ -326,12 +342,12 @@ HOMAMS_DATA = {
 }
 
 HOMAM_SPONSORSHIP_KEYS = {
-    "ayush": "ayush homam",
-    "chandi": "chandi homam",
-    "sudarshana": "sudarshana homam",
-    "sudarshan": "sudarshana homam",
-    "navagraha": "nava graha homam",
+    "ayush homam": "ayush_homam",
+    "chandi homam": "chandi_homam",
+    "sudarshana homam": "homam_individual_sudarsana_lakshmi_venkateswa_indiv",
+    "navagraha homam": "navagraha_homam",
 }
+
 
 # ============================================================
 # LUNAR FESTIVAL MAP (USED BY PANCHANG / FESTIVAL LOGIC)

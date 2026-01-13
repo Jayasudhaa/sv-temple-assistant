@@ -8,8 +8,8 @@ message_ts = int(datetime.now(ZoneInfo("America/Denver")).timestamp())
 
 def test_vishnu_sahasranam_no_context_leakage():
     
-    out = answer_user("today's schedule", message_ts=message_ts)
-
+    out = answer_user(" sudarshana homam cost", message_ts=message_ts)
+ 
     print("\n===== BOT RESPONSE =====\n")
     print(out)
 

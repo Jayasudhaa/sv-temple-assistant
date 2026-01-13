@@ -17,6 +17,23 @@ def homam_list_response() -> str:
 def get_homam_sponsorship(q: str) -> str | None:
     q = q.lower()
 
+    print("[DEBUG] get_homam_sponsorship scanning:", q)
+    if "sudarshana" in q or "sudarshan" in q:
+        return (
+            "🪔 SUDARSHANA HOMAM\n\n"
+            "📅 TEMPLE (SAAMOOHIKA):\n"
+            "• Happens every 4th Sunday at the Temple\n"
+            "• Sponsorship: $116\n\n"
+            "👤 INDIVIDUAL (BY APPOINTMENT):\n"
+            "• At Temple: $151\n"
+            "• At Home: $251\n\n"
+            "📌 Advance booking required"
+        )
+
+
+    # -------------------------------------------------
+    # 1️⃣ SPECIFIC HOMAM MATCH
+    # -------------------------------------------------
     for trigger, canonical in HOMAM_SPONSORSHIP_KEYS.items():
         if trigger in q:
             s = SPONSORSHIP_CATALOG.get(canonical)
@@ -29,54 +46,47 @@ def get_homam_sponsorship(q: str) -> str | None:
                 lines.append(f"• At Temple: ${s['temple_fee']}")
             if s.get("home_fee"):
                 lines.append(f"• At Home: ${s['home_fee']}")
-            if s.get("group_fee"):
-                lines.append(f"• Group Sponsorship: ${s['group_fee']}")
 
+            return "\n".join(lines)
+
+    # -------------------------------------------------
+    # 2️⃣ GENERIC HOMAM COST (fallback)
+    # -------------------------------------------------
+    if "homam" in q and any(w in q for w in ["cost", "price", "fee", "sponsorship"]):
+        lines = [
+            "🪔 HOMAM SPONSORSHIP DETAILS",
+            ""
+        ]
+
+        found = False
+        for item in SPONSORSHIP_CATALOG.values():
+            if item.get("category") == "homam":
+                found = True
+                lines.append(f"• {item['name']}")
+                if item.get("temple_fee"):
+                    lines.append(f"  – At Temple: ${item['temple_fee']}")
+                if item.get("home_fee"):
+                    lines.append(f"  – At Home: ${item['home_fee']}")
+
+        if found:
             return "\n".join(lines)
 
     return None
 
 
+
 def handle_homam(q: str, now: datetime) -> str | None:
     q = q.lower()
 
-    # Items handled elsewhere
-    if any(w in q for w in ["item", "items", "required", "bring", "samagri", "material"]):
-        return None
+    # ✅ COST / SPONSORSHIP FIRST
+    sponsorship = get_homam_sponsorship(q)
+    if sponsorship:
+        return sponsorship
 
-    if "homam" not in q:
-        return None
-
-    # -------------------------
-    # SPONSORSHIP (CATALOG-DRIVEN)
-    # -------------------------
-    if any(w in q for w in ["cost", "price", "sponsorship", "how much", "fee"]):
-        sponsorship = get_homam_sponsorship(q)
-        if sponsorship:
-            return sponsorship
-
-    # -------------------------
-    # LIST
-    # -------------------------
-    if any(w in q for w in ["list", "types", "available"]):
-        return homam_list_response()
-
-    # -------------------------
-    # SUDARSHANA TIMING (NO PRICE)
-    # -------------------------
-    if "sudarshana" in q:
-        return (
-            "🪔 SUDARSHANA HOMAM (SAAMOOHIKA)\n\n"
-            "• Performed on 4th Sunday at 11:00 AM\n"
-            "• Group homam performed for collective wellbeing\n\n"
-        )
-
-    # -------------------------
-    # DEFAULT
-    # -------------------------
+    # ❌ generic homam text only if no pricing intent
     return (
-        "🪔 HOMAM (Fire Ritual)\n\n"
+        "🪔 HOMAM (Fire Ritual)\n"
         "• Homams are Vedic fire rituals performed for health, prosperity, and spiritual upliftment\n"
         "• Conducted at the temple or at home (by prior booking)\n"
-        "• Sponsorship details are available on request\n\n"
+        "• Sponsorship details are available on request"
     )

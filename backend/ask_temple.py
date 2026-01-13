@@ -36,8 +36,10 @@ from backend.story_query import handle_story
 from backend.panchangam import handle_panchang
 from backend.homams_query import handle_homam
 from backend.get_timing import handle_lunar_dates
-from backend.get_timing import handle_calendar_events,handle_abhishekam, next_week_range
+from backend.get_timing import handle_calendar_events,handle_abhishekam
 from backend.kalyanam_queries import handle_kalyanam
+from backend.food_query import FOOD_KEYWORDS
+from backend.constants import MONTHLY_SCHEDULE
 
 from backend.daily_pooja_query import handle_daily_pooja
 from backend.calender_2026 import CALENDAR_2026
@@ -59,7 +61,7 @@ time_words = [
 ]
 
 calendar_words = [
-    "event", "events", "schedule", "happening",
+    "event", "events", "schedule", "happening","whats happening", "what is happening", "what's happening"
     "activity", "activities", "program", "programs"
 ]
 
@@ -363,356 +365,313 @@ INTENT_HANDLERS = {
 def classify_intent(q: str) -> Intent:
     q = q.lower()
 
-    # ---------------- VEDIC RECITATIONS (STRICT ESCALATION) ----------------
+    # ==================================================
+    # 🔱 VEDIC RECITATIONS (STRICT)
+    # ==================================================
     if any(w in q for w in [
         "suktham", "sukthams",
         "sahasranamam", "sahasranama", "sahasranamams",
-        "nama sankeerthanam", "namasankeerthanam",
         "vishnu sahasranamam", "lalitha sahasranamam",
-        "recitation", "chanting", "parayanam",
-        "naama sankeerthanam"
+        "nama sankeerthanam", "namasankeerthanam",
+        "naama sankeerthanam",
+        "recitation", "chanting", "parayanam"
     ]):
         return Intent.VEDIC_RECITATION
-    
-    # ---------------- ITEMS / SAMAGRI (HIGH PRIORITY) ----------------
-    if any(w in q for w in ["item", "items", "samagri", "materials", "bring", "required", "need"]):
+
+    # ==================================================
+    # 🧺 ITEMS / SAMAGRI (HIGH PRIORITY)
+    # ==================================================
+    if any(w in q for w in [
+        "item", "items", "samagri", "materials",
+        "bring", "required", "need"
+    ]):
         return Intent.HOMAM_ITEMS
 
-    
-    # ---------------- STORY / SIGNIFICANCE ----------------
+    # ==================================================
+    # 📖 STORY / SIGNIFICANCE (NO DATE WORDS)
+    # ==================================================
     if any(w in q for w in [
-        "story", "significance", "meaning", "why is", "why do we",
-        "importance", "about", "legend"
-    ]):
-    # Avoid date queries like "when is", "dates"
-        if not any(w in q for w in ["date", "dates", "when", "time", "timing"]):
-            return Intent.STORY
-        
-    # ---------------- FESTIVALS (CALENDAR-DRIVEN) ----------------
-    if any(w in q for w in [
-        "festival", "festivals",
-        "utsavam", "utsav", "celebration"
-    ]):
-        return Intent.EVENTS
-    
-    # ---------------- PANCHANG ----------------
-    if any(w in q for w in ["panchang", "tithi", "nakshatra", "star","panchangam"]):
+        "story", "significance", "meaning",
+        "importance", "legend", "about", "why"
+    ]) and not any(w in q for w in [
+        "date", "dates", "when", "time", "timing"
+    ]) and not any(w in q for w in [
+        "kalyanam",
+        "abhishekam",
+        "homam",
+        "pooja",
+        "seva"]):
+        return Intent.STORY
+
+    # ==================================================
+    # 🪐 PANCHANG (DATE-SENSITIVE)
+    # ==================================================
+    if any(w in q for w in ["panchang", "panchangam", "tithi", "nakshatra", "star"]):
         if "tomorrow" in q:
             return Intent.PANCHANG_TOMORROW
-        if any(m in q for m in [
+        if any(c.isdigit() for c in q) or any(m in q for m in [
             "jan","feb","mar","apr","may","jun",
             "jul","aug","sep","oct","nov","dec"
-        ]) or any(c.isdigit() for c in q):
+        ]):
             return Intent.PANCHANG_DATE
         return Intent.PANCHANG_TODAY
 
-    # ---------------- EVENTS (HIGH PRIORITY) ----------------    
-    # Use EVENTS only when NO specific domain keyword exists
-    
-    if any(w in q for w in [
-        "event", "events", "happening", "schedule", "program", 
-    ]) and not any(w in q for w in [
-        "panchang", "panchangam", "tithi", "nakshatra",
-        "abhishekam", "homam", "kalyanam",
-        "satyanarayana", "suprabhata", "pooja"
-    ]):
-        return Intent.EVENTS
-
-      
-    # ---------------- SATYANARAYANA POOJA (HIGH PRIORITY) ----------------
-    if "satyanarayana" in q:
+    # ==================================================
+    # 🍽️ FOOD / ANNADANAM
+    # ==================================================
+    if any(w in q for w in ["annadanam", "cafeteria", "food", "lunch", "prasadam", "annadanam today"]):
+        return Intent.FOOD
+      # ---------------- SATYANARAYANA POOJA (HIGH PRIORITY) ----------------
+    if "satyanarayana" in q or "satya narayana" in q:
         return Intent.SATYANARAYANA_POOJA
 
-    # ---------------- FOOD ----------------
-    if any(w in q for w in ["annadanam", "cafeteria", "food", "lunch", "prasadam"]):
-        return Intent.FOOD
-
-    # ---------------- TEMPLE HOURS ----------------
-    if any(w in q for w in ["open", "close", "hours", "timing"]):
+    # ==================================================
+    # 🕰️ TEMPLE HOURS
+    # ==================================================
+    if any(w in q for w in ["open", "close", "hours", "timing"]) \
+    and "satyanarayana" not in q \
+    and "satya narayana" not in q:
         return Intent.TEMPLE_HOURS
 
-    # ---------------- LOCATION ----------------
+    # ==================================================
+    # 📍 LOCATION
+    # ==================================================
     if any(w in q for w in ["address", "location", "where is", "directions"]):
         return Intent.LOCATION
-  
-    # ---------------- LUNAR DATES (POORNIMA / AMAVASYA) ----------------
-    if any(w in q for w in ["poornima", "purnima", "amavasya", "new moon", "full moon"]):
+
+    # ==================================================
+    # 🌕 LUNAR DATES (POORNIMA / AMAVASYA)
+    # ==================================================
+    if any(w in q for w in [
+        "poornima", "purnima", "amavasya",
+        "new moon", "full moon"
+    ]):
         return Intent.LUNAR_DATES
 
-    
-    
-    # ---------------- HOMAMS ----------------
+    # ==================================================
+    # 🔥 HOMAMS
+    # ==================================================
     if "homam" in q:
         return Intent.HOMAMS
-    # ---------------- / KALYANAM ----------------
+
+    # ==================================================
+    # 💍 KALYANAM
+    # ==================================================
     if "kalyanam" in q:
         return Intent.KALYANAM
 
-    # ---------------- ABHISHEKAM ----------------
+    # ==================================================
+    # 🪔 ABHISHEKAM
+    # ==================================================
     if "abhishekam" in q:
-
-        # Sponsorship / amount queries
         if any(w in q for w in [
             "sponsor", "sponsorship", "amount", "cost", "price"
         ]):
             return Intent.ABHISHEKAM_SPONSORSHIP
-
-        # Calendar / date-based queries
-        if any(w in q for w in [
-            "when", "date", "today", "next", "month", "this week", "next week"
-        ]):
-            return Intent.WEEKLY_ABHISHEKAM
-
-        # Weekly schedule (Abhishekam-specific)
-        if any(w in q for w in ["schedule", "weekly"]):
-            return Intent.WEEKLY_ABHISHEKAM
-
         return Intent.WEEKLY_ABHISHEKAM
 
-    if any(p in q for p in ["next week", "coming week", "upcoming week", "following week"]):
+    # ==================================================
+    # 📅 EVENTS (GENERIC — TIME RESOLVED LATER)
+    # ==================================================
+    if any(w in q for w in [
+        "event", "events", "festival", "festivals",
+        "schedule", "happening", "activities",
+        "program", "programs",
+        "this week", "next week", "coming week",
+        "upcoming", "upcoming week", "following week",
+        "this month", "next month"
+    ]) and not any(f in q for f in FOOD_KEYWORDS) and not any(w in q for w in [
+        "daily pooja",
+        "suprabhata",
+        "nitya archana",
+        "archana"
+    ]):
         return Intent.EVENTS
 
-    if "suprabhata" in q:
+    # ==================================================
+    # 🌅 DAILY POOJA / SUPRABHATA
+    # ==================================================
+    if "suprabhata" in q or "daily pooja" in q:
         return Intent.DAILY_POOJA
-    
-    if "daily pooja" in q:
-        return Intent.DAILY_POOJA
-    
-    # ---------------- ARJITHA ----------------
+
+    # ==================================================
+    # 🪔 ARJITHA SEVA
+    # ==================================================
     if "arjitha" in q:
         return Intent.ARJITHA_SEVA
 
-    # ---------------- VAHANA ----------------
+    # ==================================================
+    # 🚗 VAHANA POOJA
+    # ==================================================
     if any(w in q for w in ["vahana", "vehicle", "car pooja"]):
         return Intent.VAHANA_POOJA
 
-    # ---------------- SUPRABHATA SEVA ----------------
-    if "suprabhata" in q:
-        return Intent.DAILY_POOJA
-
-    # ---------------- CONTACTS (PEOPLE) ----------------
+    # ==================================================
+    # 📞 CONTACTS
+    # ==================================================
     if any(w in q for w in [
         "chairman", "president", "manager",
-        "secretary", "treasurer", "phone", "email", "contact"
+        "secretary", "treasurer",
+        "phone", "email", "contact"
     ]):
         return Intent.CONTACTS
 
-    # ---------------- COMMITTEES ----------------
+    # ==================================================
+    # 👥 COMMITTEES
+    # ==================================================
     if any(w in q for w in [
         "committee", "committees", "board",
         "trustee", "leadership", "executive committee"
     ]):
         return Intent.COMMITTEE
 
-    # ---------------- CULTURAL ----------------
+    # ==================================================
+    # 🎶 CULTURAL
+    # ==================================================
     if any(w in q for w in ["dance", "music", "bhajan", "concert", "cultural"]):
         return Intent.CULTURAL
 
+    # ==================================================
+    # 🤖 FALLBACK (RAG)
+    # ==================================================
     return Intent.RAG_FALLBACK
-      
+
+def is_weekend_day(dt: datetime) -> bool:
+    return dt.weekday() >= 5   # 5 = Saturday, 6 = Sunday
+
 def answer_user(
     query: str,
     user_id: Optional[str] = None,
     message_ts: Optional[int] = None
 ):
-    # --------------------------------------------------
-    # Resolve current time
-    # --------------------------------------------------
-    if message_ts:
-        now = datetime.fromtimestamp(message_ts, ZoneInfo("America/Denver"))
-    else:
-        now = datetime.now(ZoneInfo("America/Denver"))
+    # ------------------ TIME ------------------
+    now = (
+        datetime.fromtimestamp(message_ts, ZoneInfo("America/Denver"))
+        if message_ts else
+        datetime.now(ZoneInfo("America/Denver"))
+    )
 
     if not query or not isinstance(query, str):
         return "Please provide a valid question."
 
-    # --------------------------------------------------
-    # Normalize query
-    # --------------------------------------------------
-    query = query.strip()[:MAX_QUERY_LEN]
-    
-    q = normalize_query(query) 
-    q = autocorrect_query(q)
-    q = normalize_intent(q)
-  
-    logger.info("AFTER NORMALIZATION: %s", q)
-
+    # ------------------ NORMALIZATION ------------------
+    q = normalize_intent(
+        autocorrect_query(
+            normalize_query(query.strip()[:MAX_QUERY_LEN])
+        )
+    )
 
     intent = classify_intent(q)
-    logger.info("Intent=%s | Query=%s", intent.value, q)
 
-        # ==================================================
-    # 📆 MONTHLY EVENTS / POOJA SCHEDULE
-    # ==================================================
-    if intent == Intent.EVENTS and any(w in q for w in [
-    "monthly", "month", "this month", "next month",
-    "january", "february", "march", "april",
-    "may", "june", "july", "august",
-    "september", "october", "november", "december"
-]):
+    print(f"[DEBUG] INTENT={intent.name} | QUERY='{q}' | NOW={now.date()}")
 
-
-        sections: List[str] = []
-
-        # -------- Resolve target month --------
-        month_map = {
-            "january": 1, "february": 2, "march": 3, "april": 4,
-            "may": 5, "june": 6, "july": 7, "august": 8,
-            "september": 9, "october": 10, "november": 11, "december": 12
-        }
-
-        target_month = now.month
-        target_year = now.year
-        # Default: "monthly" → current month
-        if "monthly" in q or "month" in q:
-            target_month = now.month
-            target_year = now.year
-
-
-        for name, num in month_map.items():
-            if name in q:
-                target_month = num
-                break
-
-        if "next month" in q:
-            temp = now.replace(day=1) + timedelta(days=32)
-            target_month = temp.month
-            target_year = temp.year
-
-        month_name = datetime(target_year, target_month, 1).strftime("%B").lower()
-
-        sections.append(
-            f"📅 EVENTS – {month_name.capitalize()} {target_year}"
-        )
-
-        # -------- Calendar lookup --------
-        month_data = {}
-        if target_year == 2026:
-            month_data = CALENDAR_2026.get(month_name, {})
-
-        found = False
-
-        for day in sorted(month_data.keys()):
-            info = month_data[day]
-            for key in ["festival", "abhishekam", "homam", "kalyanam"]:
-                for event in info.get(key, []):
-                    found = True
-                    sections.append(
-                        f"• {day} {month_name.capitalize()}: {event}"
-                    )
-
-        if found:
-            return finalize("\n".join(sections), q)
-
-        return finalize(
-            f"• No special poojas or events are listed for {month_name.capitalize()} {target_year}.",
-            q
-        )
-
-    # ==================================================
-    # ⭐ TODAY / NOW / WHAT'S HAPPENING (COMPOSITE VIEW)
-    # ==================================================
-    if intent == Intent.EVENTS and any(w in q for w in [
-    "today", "now", "what's happening", "whats happening"
-]):
-        sections: List[str] = []
-        sections.append(
-        f"📅 Date: {now.strftime('%B %d, %Y')} ({now.strftime('%A')})"
-)
-
-
-        # --------------------------------------------------
-        # 1️⃣ DAILY POOJA (NO STATUS WORDS)
-        # --------------------------------------------------
-        daily = handle_daily_pooja("daily pooja", now)
-        if daily:
-            sections.append(daily)
-
-        # --------------------------------------------------
-        # 2️⃣ CALENDAR EVENTS (SOURCE OF TRUTH)
-        # --------------------------------------------------
-        today = now.date()
-        cal_lines = ["📅 EVENTS – TODAY", ""]
-
-        day_info = {}
-        if now.year == 2026:
-            month = today.strftime("%B").lower()
-            day_info = CALENDAR_2026.get(month, {}).get(today.day, {})
-
-        found_calendar_event = False
-
-        for key in ["festival", "abhishekam", "homam", "kalyanam"]:
-            for item in day_info.get(key, []):
-                found_calendar_event = True
-                cal_lines.append(f"• {item}")
-
-        if found_calendar_event:
-            sections.append("\n".join(cal_lines))
-
-        # --------------------------------------------------
-        # 3️⃣ PANCHANGAM (FORCED TODAY)
-        # --------------------------------------------------
-        panchang_today = handle_panchang("panchang today", now)
-        if panchang_today:
-            sections.append(panchang_today)
-
-        # --------------------------------------------------
-        # FINAL RESPONSE
-        # --------------------------------------------------
-        if sections:
-            return finalize("\n\n".join(sections), q)
-
-        return finalize(
-            "• No special poojas or events are scheduled for today.",
-            q
-        )
-    # ==================================================
-    # 🔁 STANDARD HANDLER FLOW
-    # ==================================================
-    handlers = INTENT_HANDLERS.get(intent, [])
-    logger.info("Handlers=%s", handlers)
-    print("QUERY:", q)
-    tokens = set(q.split())
-
-    ESCALATION_TOKENS = {
-        "manager", "office", "contact",
-        "phone", "number",
-        "priest", "archaka", "pandit", "pujari"
-    }
-
-    if tokens & ESCALATION_TOKENS:
+    # ------------------ ESCALATION ------------------
+    if set(q.split()) & {
+        "priest", "archaka", "pandit", "pujari","kanakabhishekam"
+    }:
         return finalize(
             "• Please contact the Temple office for assistance from the Priest or Temple Manager.",
             q
         )
+    # ==================================================
+    # 🪔 HOW TO BOOK POOJA / SEVA (EXPLICIT ONLY)
+    # ==================================================
+    if any(k in q for k in [
+        "how to book",
+        "how do i book",
+        "how to schedule",
+        "how do i schedule",
+        "book pooja",
+        "schedule pooja",
+        "book puja",
+        "schedule puja",
+    ]):
+        return finalize(
+            "🪔 HOW TO BOOK A POOJA / SEVA\n\n"
+            "• Decide the pooja or seva type\n"
+            "• Choose temple or home service\n"
+            "• Contact the temple office to confirm date & priest availability\n"
+            "• Complete sponsorship/payment as applicable\n\n"
+            "📞 Temple office can assist with scheduling and guidance.",
+            q
+        )
+
+
+    # ------------------ EVENT HANDLING (SINGLE ENTRY) ------------------
+    result = handle_calendar_events(q, now)
+
+    print("result",result)
+   
+    if (
+    intent == Intent.EVENTS
+    and result
+    and "📅 EVENTS – TODAY" in result
+    and "No special events scheduled" in result
+):
+        blocks = ["📅 EVENTS – TODAY"]
+
+        # DAILY BASELINE
+        daily = handle_daily_pooja("daily pooja", now)
+        if daily:
+            blocks.append(daily)
+
+        panchang = handle_panchang("panchang today", now)
+        if panchang:
+            blocks.append(panchang)
+
+        # 🍽️ ANNADANAM INFO (INFORMATIONAL ONLY)
+        is_weekend = is_weekend_day(now)
+        print("is weekend",is_weekend)
+        if not is_weekend:
+            blocks.append(
+                "🍽️ ANNADANAM\n"
+                f"• No Annadanam today ({now.strftime('%A')})\n"
+                "• Served on Saturdays & Sundays only"
+            )
+
+        return finalize("\n\n".join(blocks), q)
     
-    for handler in handlers:
+    # ------------------ MONTHLY SCHEDULE (COMPOSED VIEW) ------------------
+    if (
+        intent == Intent.EVENTS
+        and "month" in q
+        and any(w in q for w in ["schedule", "pooja", "events"])
+    ):
+        blocks = []
+        blocks.append("📆 MONTHLY POOJA SCHEDULE")
+        blocks.append("")
+        blocks.extend(MONTHLY_SCHEDULE)
+
+        # 1️⃣ Monthly calendar events
+        cal = handle_calendar_events(q, now)
+        if cal:
+            blocks.append(cal)
+
+        # 2️⃣ Monthly Abhishekam schedule
+        abhi = handle_abhishekam(f"abhishekam {q}", now)
+        if abhi:
+            blocks.append(abhi)
+
+        # 3️⃣ Monthly Kalyanam (optional, safe)
+        kaly = handle_kalyanam(f"kalyanam {q}", now)
+        if kaly:
+            blocks.append(kaly)
+
+        return finalize("\n\n".join(blocks), q)
+
+
+    # ------------------ STANDARD HANDLERS ------------------
+    for handler in INTENT_HANDLERS.get(intent, []):
         try:
             result = handler(q, now)
             if result:
-                print("result", result)
                 return finalize(result, q)
         except Exception:
             logger.error(f"Handler {handler.__name__} failed", exc_info=True)
 
-    # ==================================================
-    # ☎️ CONDITIONAL ESCALATION (LAST RESORT)
-    # ==================================================
-    
-    
-
-    # --------------------------------------------------
-    # Fallback
-    # --------------------------------------------------
     return finalize(
         "• I don’t have specific information on that right now.",
         q
     )
-
-
-
-
-
-        
 
 
