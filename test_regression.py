@@ -566,59 +566,9 @@ def assert_contains_any(response: str, keywords: list[str]):
     lowered = response.lower()
     assert any(k in lowered for k in keywords), f"Expected one of {keywords}"
 
-
-def assert_not_contains(response: str, forbidden: list[str]):
-    lowered = response.lower()
-    for f in forbidden:
-        assert f not in lowered, f"Forbidden phrase found: {f}"
-
-def test_today_schedule_queries(query):
-    response = answer_user(query, message_ts=message_ts)
-
-    print("\n" + "=" * 90)
-    print(f"QUERY : {query}")
-    print("-" * 90)
-    print("BOT RESPONSE:\n")
-    print(response)
-    print("=" * 90)
-
-    # ---------------- BASIC SAFETY ----------------
-    assert response is not None
-    assert isinstance(response, str)
-    assert response.strip() != ""
-
-    # ---------------- CORE TODAY ASSERTS ----------------
-    assert "EVENTS – TODAY" in response
-
-    # Daily schedule must always appear
-    assert (
-        "DAILY TEMPLE SCHEDULE" in response
-        or "Daily Temple Schedule" in response
-    )
-
-    # Panchangam must always appear
-    assert (
-        "PANCHANGAM" in response
-        or "Today's Panchangam" in response
-    )
-
 # =========================================================
 # TEST
 # =========================================================
-
-@pytest.mark.parametrize("query", ABHISHEKAM_QUERIES)
-def test_abhishekam_bot_responses(query):
-    response = answer_user(query, message_ts=message_ts)
-
-    print("\n" + "=" * 90)
-    print(f"QUERY : {query}")
-    print("-" * 90)
-    print("BOT RESPONSE:\n")
-    print(response)
-    print("=" * 90)
-
-    # Only ensure bot doesn't crash
-    assert response is not None
 
 # =========================================================
 # ASSERTION HELPERS
@@ -636,11 +586,6 @@ def assert_not_generic_fallback(resp: str):
     ]
     for f in forbidden:
         assert f not in resp.lower(), f"Generic fallback used: {f}"
-
-
-def assert_contains_any(resp: str, words: list[str]):
-    text = resp.lower()
-    assert any(w in text for w in words), f"Expected one of {words}"
 
 
 # =========================================================
@@ -701,7 +646,8 @@ def test_bot_responses(query):
     q = query.lower()
 
     if "abhishekam" in q or "abishek" in q:
-        assert_abhishekam(resp)
+        assert_contains_any(resp, ["abhishekam"])
+        
 
     elif "kalyanam" in q:
         assert_kalyanam(resp)

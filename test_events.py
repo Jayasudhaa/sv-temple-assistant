@@ -59,6 +59,170 @@ MONTH_QUERIES = [
     "events in november",
     "events in december",
 ]
+TIME_WORD_QUERIES = [
+    "today",
+    "tomorrow",
+    "yesterday",
+    "this week",
+    "next week",
+    "last week",
+    "coming week",
+    "upcoming week",
+    "following week",
+    "current week",
+    "weekend",
+    "next weekend",
+    "this month",
+    "next month",
+    "this year",
+    
+]
+
+@pytest.mark.parametrize("query", TIME_WORD_QUERIES)
+def test_time_words_trigger_events(query):
+    resp = answer_user(query, message_ts=NOW_TS)
+    print(f"\nQUERY: {query}\n{resp}")
+    assert_events_response(resp)
+
+CALENDAR_WORD_QUERIES = [
+    "events",
+    "festival",
+    "festivals",
+    "schedule",
+    "programs",
+    "activities",
+    "happening",
+    "what's happening",
+    "what is happening",
+    "special events",
+    "anything happening",
+]
+
+@pytest.mark.parametrize("query", CALENDAR_WORD_QUERIES)
+def test_calendar_words_trigger_events(query):
+    resp = answer_user(query, message_ts=NOW_TS)
+    print(f"\nQUERY: {query}\n{resp}")
+    assert_events_response(resp)
+
+CONTACT_QUERIES = [
+    "temple manager",
+    "president",
+    "secretary",
+    "phone number",
+    "contact temple",
+]
+import re
+
+@pytest.mark.parametrize("query", CONTACT_QUERIES)
+def assert_has_contact_info(resp: str):
+    # must contain phone number or email
+    has_phone = re.search(r"\d{3}[-.\s]?\d{3}[-.\s]?\d{4}", resp)
+    has_email = "@" in resp
+
+    assert has_phone or has_email
+
+STORY_QUERIES = [
+    "story of lord venkateswara",
+    "significance of pongal",
+    "why is ekadasi important",
+]
+
+@pytest.mark.parametrize("query", STORY_QUERIES)
+def test_story_not_events(query):
+    resp = answer_user(query, message_ts=NOW_TS)
+    print(f"\nQUERY: {query}\n{resp}")
+    assert "EVENTS" not in resp
+
+SATYA_QUERIES = [
+    "satyanarayana pooja",
+    "satya narayana vratham",
+    "when is satyanarayana",
+]
+
+@pytest.mark.parametrize("query", SATYA_QUERIES)
+def test_satyanarayana_not_events(query):
+    resp = answer_user(query, message_ts=NOW_TS)
+    print(f"\nQUERY: {query}\n{resp}")
+    assert "satyanarayana" in resp.lower()
+    assert "EVENTS" not in resp
+
+HOMAM_QUERIES = [
+    "sudarshana homam",
+    "homam schedule",
+    "book homam",
+]
+
+@pytest.mark.parametrize("query", HOMAM_QUERIES)
+def test_homam_not_events(query):
+    resp = answer_user(query, message_ts=NOW_TS)
+    print(f"\nQUERY: {query}\n{resp}")
+    assert "homam" in resp.lower()
+    assert "EVENTS" not in resp
+
+ABHISHEKAM_QUERIES = [
+    "venkateswara abhishekam",
+    "siva abhishekam",
+    "abhishekam sponsorship",
+]
+
+@pytest.mark.parametrize("query", ABHISHEKAM_QUERIES)
+def test_abhishekam_not_events(query):
+    resp = answer_user(query, message_ts=NOW_TS)
+    print(f"\nQUERY: {query}\n{resp}")
+    assert "abhishekam" in resp.lower()
+    assert "EVENTS" not in resp
+
+ARJITHA_QUERIES = [
+    "arjitha seva",
+    "book arjitha",
+]
+
+@pytest.mark.parametrize("query", ARJITHA_QUERIES)
+def test_arjitha_not_events(query):
+    resp = answer_user(query, message_ts=NOW_TS)
+    print(f"\nQUERY: {query}\n{resp}")
+    assert "arjitha" in resp.lower()
+    assert "EVENTS" not in resp
+
+PANCHANG_QUERIES = [
+    "panchang today",
+    "tithi today",
+    "nakshatra today",
+]
+
+@pytest.mark.parametrize("query", PANCHANG_QUERIES)
+def test_panchang_not_events(query):
+    resp = answer_user(query, message_ts=NOW_TS)
+    print(f"\nQUERY: {query}\n{resp}")
+    assert "panchang" in resp.lower() or "tithi" in resp.lower()
+    assert "EVENTS" not in resp
+
+CULTURAL_QUERIES = [
+    "dance program",
+    "singing event",
+    "bhajans",
+    "cultural programs",
+]
+
+@pytest.mark.parametrize("query", CULTURAL_QUERIES)
+def test_cultural_not_events(query):
+    resp = answer_user(query, message_ts=NOW_TS)
+    print(f"\nQUERY: {query}\n{resp}")
+    assert "dance" in resp.lower() or "bhajan" in resp.lower() or "cultural" in resp.lower()
+    assert "EVENTS" not in resp
+
+VEDIC_QUERIES = [
+    "sri suktham",
+    "purusha suktham",
+    "vishnu sahasranamam",
+]
+
+@pytest.mark.parametrize("query", VEDIC_QUERIES)
+def test_vedic_not_events(query):
+    resp = answer_user(query, message_ts=NOW_TS)
+    print(f"\nQUERY: {query}\n{resp}")
+    assert "suktham" in resp.lower() or "sahasranamam" in resp.lower()
+    assert "EVENTS" not in resp
 
 # --------------------------------------------------
 # HELPERS

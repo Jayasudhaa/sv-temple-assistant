@@ -33,13 +33,6 @@ TEMPLE_VOCAB = set(
     ]
 )
 
-CANONICAL_FESTIVALS = {
-    "ugadi": ["ugadi"],
-    "ram navami": ["rama navami", "ram navami"],
-    "diwali": ["deepavali", "diwali"],
-    "sankranti": ["sankranti", "pongal"],
-}
-
 TEMPLE_INFO = {
     "address": "1495 South Ridge Road, Castle Rock, Colorado 80104",
     "Temple_Manager": "303-898-5514",
@@ -74,39 +67,6 @@ TEMPLE_INFO = {
         "education_cultural": "Education & Cultural Committee - Sri. Krishna Madhavan (Chair)",
         "security": "Security Committee - Sri. Muthukumarappan Ramurthy (Chair)"
     }
-}
-
-WEEKLY_SPONSORSHIP = {
-    "mahalakshmi abhishekam": (
-        "💰 MAHALAKSHMI AMMAVARU ABHISHEKAM – SPONSORSHIP\n\n"
-        "• Abhishekam Sponsorship: $116\n"
-        "• Vastram Sponsorship: $301\n"
-        "  (Includes Abhishekam + temple-provided Vastram)"
-        ),
-
-    "ganapati abhishekam": "💰Sponsorship Amount: $51",
-    
-    "murugan abhishekam": "💰Sponsorship Amount: $51",
-    "andal abhishekam": "💰Sponsorship Amount: $116",
-    "siva abhishekam": "💰Sponsorship Amount: $51",
-    "hanuman abhishekam": "💰Sponsorship Amount: $51",
-    "raghavendra swamy abhishekam":"💰Sponsorship Amount: $51",
-    
-    "sai baba abhishekam": "💰Sponsorship Amount: $51",
-    "sudarshana homam": "💰Saamoohika Homam: Sponsorship Amount: $51",
-
-    "venkateswara swamy kalyanam": (
-    "💰 SRI VENKATESWARA SWAMY KALYANAM – SPONSORSHIP\n\n"
-    "• Kalyanam only: $151\n"
-    "• Kalyanam with Vastram: $516\n"
-    "  (Temple provides Vastram for Swamy & Ammavaru)"
-),
-    "venkateswara swamy abhishekam": (
-    "💰 SRI VENKATESWARA SWAMY ABHISHEKAM – SPONSORSHIP\n\n"
-    "• Abhishekam Sponsorship: $151\n"
-    "• Vastram Sponsorship: $1116\n"
-    "  (Temple provides Vastram; includes Abhishekam sponsorship)"
-), 
 }
 
 LIFE_EVENT_KEYWORDS = [
@@ -190,57 +150,17 @@ def handle_temple_hours(q: str, now: datetime) -> str | None:
     current_time = now.time()
     is_weekend = now.weekday() >= 5
 
-    # ---------------- HOLIDAY (CALENDAR) ----------------
+    # ---------------- FEDERAL HOLIDAYS ----------------
     holidays = get_federal_holidays(now.year)
     is_holiday = today in holidays
     holiday_name = holidays.get(today)
 
-    # ---------------- FESTIVAL (CALENDAR – SOURCE OF TRUTH) ----------------
+    # ---------------- FESTIVALS (DISPLAY ONLY) ----------------
     festival_names = []
     if today.year == 2026:
         month = today.strftime("%B").lower()
-        day_info = CALENDAR_2026.get(month, {}).get(today.day, {})
-        festival_names = day_info.get("festival", [])
+        festival_names = CALENDAR_2026.get(month, {}).get(today.day, {}).get("festival", [])
 
-    is_festival_day = bool(festival_names)
-
-    # ---------------- FESTIVAL (QUERY INTENT ONLY) ----------------
-    is_festival_query = any(w in q for w in [
-        "festival",
-        "ugadi",
-        "sankranthi"
-        "yugadi",
-        "rama navami",
-        "ram navami",
-        "diwali",
-        "deepavali",
-        "sankranti",
-        "pongal",
-        "navaratri",
-        "dussehra",
-        "dasara",
-        "maha shivaratri",
-        "shivaratri",
-    ])
-
-    # ---------------- HOLIDAY (QUERY INTENT ONLY) ----------------
-    is_holiday_query = any(w in q for w in [
-        "holiday",
-        "federal holiday",
-        "christmas",
-        "new year",
-        "thanksgiving",
-        "independence day",
-        "memorial day",
-        "labor day",
-        "mlk",
-        "martin luther king",
-        "columbus day",
-        "presidents day",
-        "president's day",
-    ])
-    
-    # ---------------- FESTIVAL DETAILS ----------------
     # ---------------- TIME SLOTS ----------------
     full_day_slot = (time(9, 0), time(20, 0))
     weekday_morning = (time(9, 0), time(12, 0))
@@ -249,49 +169,24 @@ def handle_temple_hours(q: str, now: datetime) -> str | None:
     def in_range(a, b):
         return a <= current_time <= b
 
-    # ---------------- RESOLVE DAY TYPE (SINGLE SOURCE OF TRUTH) ----------------
-    if is_festival_day:
-        day_type = "festival"
-    elif is_holiday:
+    # ---------------- DAY TYPE (HOURS ONLY) ----------------
+    if is_holiday:
         day_type = "federal_holiday"
-    elif is_holiday_query:
-        day_type = "holiday_query"
     elif is_weekend:
         day_type = "weekend"
     else:
         day_type = "weekday"
 
     # ---------------- LABEL ----------------
-    festival_label = ", ".join(festival_names) if is_festival_day else None
+    if day_type == "federal_holiday" and holiday_name:
+        label = holiday_name
+    elif day_type == "weekend":
+        label = "Weekend"
+    else:
+        label = "Weekday"
 
-    label = (
-        festival_label if day_type == "festival"
-        else holiday_name if day_type == "federal_holiday"
-        else "Festival Day" if is_festival_query
-        else "Federal Holiday" if day_type == "holiday_query"
-        else "Weekend" if day_type == "weekend"
-        else "Weekday"
-    )
-    show_festival_hours_note = is_festival_day or is_holiday or is_festival_query or is_holiday_query
-    if is_festival_query or is_holiday_query:
-        lines = [
-            "🕉️ FESTIVAL DAY TIMINGS",
-            "",
-            "• Temple is open from 9:00 AM – 8:00 PM on all major festivals and federal holidays",
-            "• Timings may vary based on special rituals",
-        ]
-
-        if festival_names:
-            lines.extend(["", "🎉 Festival(s):"])
-            for f in festival_names:
-                lines.append(f"• {f}")
-
-        return "\n".join(lines)
-
-
-    
     # ---------------- STATUS LOGIC ----------------
-    if day_type in ["festival", "federal_holiday", "holiday_query", "weekend"]:
+    if day_type in ["federal_holiday", "weekend"]:
         if in_range(*full_day_slot):
             lines = [
                 f"🕉️ TEMPLE STATUS: OPEN Until 8 PM ({label})",
@@ -305,18 +200,19 @@ def handle_temple_hours(q: str, now: datetime) -> str | None:
                 "• Hours: 9:00 AM – 8:00 PM",
                 "• Next opening: 9:00 AM",
             ]
-         # ✅ Append policy note ONCE
-        if day_type in ["festival", "federal_holiday"] or show_festival_hours_note:
-            lines.append(
-                "• Temple is open from 9:00 AM – 8:00 PM on all major festivals and federal holidays"
-            )
-
 
     else:
-        # Weekday split hours
-        if in_range(*weekday_morning) or in_range(*weekday_evening):
+        # ---------------- WEEKDAY SPLIT HOURS ----------------
+        if in_range(*weekday_morning):
+            closes_at = "12:00 PM"
+        elif in_range(*weekday_evening):
+            closes_at = "8:00 PM"
+        else:
+            closes_at = None
+
+        if closes_at:
             lines = [
-                f"🕉️ TEMPLE STATUS: OPEN Until 8 PM ({label})",
+                f"🕉️ TEMPLE STATUS: OPEN Until {closes_at} ({label})",
                 "",
                 "• Weekday Hours:",
                 "  – 9:00 AM – 12:00 PM",
@@ -337,13 +233,21 @@ def handle_temple_hours(q: str, now: datetime) -> str | None:
                 f"• Next opening: {next_open}",
             ]
 
-    # ---------------- FESTIVAL DETAILS ----------------
+    # ---------------- FESTIVAL INFO (DISPLAY ONLY) ----------------
     if festival_names:
-        lines.extend(["", "🎉 Festival:"])
+        lines.extend(["", "🎉 Festival Today:"])
         for f in festival_names:
-            lines.append(f"• {f}") 
+            lines.append(f"• {f}")
+
+    
+
+    lines.extend([
+                "",
+                "ℹ️ Temple hours shown are for today only."
+            ])
 
     return "\n".join(lines)
+
 
 def handle_contacts(q: str, now: datetime) -> str | None:
     q = q.lower()

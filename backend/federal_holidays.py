@@ -43,11 +43,10 @@ def get_federal_holidays(year: int) -> dict[date, str]:
     holidays[observe_if_weekend(date(year, 12, 25))] = "Christmas Day"
 
     # Floating holidays
-    holidays[nth_weekday_of_month(year, 1, 0, 3)] = "Martin Luther King Jr. Day"
     holidays[last_weekday_of_month(year, 5, 0)] = "Memorial Day"
     holidays[nth_weekday_of_month(year, 9, 0, 1)] = "Labor Day"
     holidays[nth_weekday_of_month(year, 11, 3, 4)] = "Thanksgiving Day"
-    holidays[nth_weekday_of_month(year, 2, 0, 3)] = "Presidents’ Day"
+    
 
     return holidays
 

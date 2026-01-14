@@ -89,6 +89,14 @@ time_words = [
     "upcoming week",
     "following week",
     "current week",
+    "weekend",
+    "weekends",
+    "next weekend",
+
+    "upcoming",
+    "coming",
+    "upcoming events",
+    "upcoming activities",
 
     # -------- MONTH --------
     "this month",
@@ -102,7 +110,6 @@ time_words = [
     "next year",
     "last year",
 ]
-
 
 calendar_words = [
 
@@ -442,7 +449,7 @@ INTENT_HANDLERS = {
 }
 
 def classify_intent(q: str) -> Intent:
-    q = q.lower()
+    q = normalize_query(q.lower())
 
     # ==================================================
     # 🔱 VEDIC RECITATIONS (STRICT)
@@ -476,7 +483,7 @@ def classify_intent(q: str) -> Intent:
     # 📞 CONTACTS
     # ==================================================
     if any(w in q for w in [
-        "chairman", "president", "manager", "temple manager"
+        "chairman", "president", "manager", "temple manager",
         "secretary", "treasurer",
         "phone", "email", "contact"
     ]):
@@ -585,10 +592,10 @@ def classify_intent(q: str) -> Intent:
     # 📅 EVENTS (GENERIC — TIME RESOLVED LATER)
     # ==================================================
     if (
-    any(w in q for w in calendar_words)
-    and (
+    (
         any(t in q for t in time_words)
         or any(m.lower() in q for m in calendar.month_name if m)
+        or any(w in q for w in calendar_words)
     )
     and not any(f in q for f in FOOD_KEYWORDS)
     and not any(w in q for w in [
@@ -599,8 +606,6 @@ def classify_intent(q: str) -> Intent:
     ])
 ):
         return Intent.EVENTS
-
-
 
     # ==================================================
     # 🌅 DAILY POOJA / SUPRABHATA
@@ -614,7 +619,6 @@ def classify_intent(q: str) -> Intent:
     if "arjitha" in q:
         return Intent.ARJITHA_SEVA
 
-   
     # ==================================================
     # 🤖 FALLBACK (RAG)
     # ==================================================
@@ -632,8 +636,6 @@ def ensure_event_time(q: str) -> str:
     if any(t in q for t in time_words):
         return q
     return q + " today"
-
-
 
 def answer_user(
     query: str,
@@ -654,6 +656,7 @@ def answer_user(
     q = normalize_query(query.strip()[:MAX_QUERY_LEN])
     q = autocorrect_query(q)
     q = normalize_intent(q)
+   
 
     print("after normalization",q)
     print("[DEBUG-NORM]", q)
@@ -663,9 +666,6 @@ def answer_user(
     m.lower() in q for m in calendar.month_name if m
 ):
         q = ensure_event_time(q)
-
-    
-
 
     print(f"[DEBUG] INTENT={intent.name} | QUERY='{q}' | NOW={now.date()}")
 
@@ -763,12 +763,9 @@ def answer_user(
             
 
     # -------- WEEK / MONTH / OTHER --------
-        # ---------- MONTH / YEAR ----------
-    if any(m.lower() in q for m in calendar.month_name if m) or "month" in q:
-        return finalize(result, q)
-
-
-    
+        if any(m.lower() in q for m in calendar.month_name if m) or "month" in q:
+            return finalize(result, q)
+   
     # ------------------ MONTHLY SCHEDULE (COMPOSED VIEW) ------------------
     if (
         intent == Intent.EVENTS

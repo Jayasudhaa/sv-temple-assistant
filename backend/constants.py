@@ -119,50 +119,50 @@ DISPLAY_WEEKLY_NAMES = {
 }
 
 MONTH_NORMALIZATION_MAP = {
-    " jan ": " january ",
-    " jan.": " january",
-    " january ": " january ",
+    "jan": "january",
+    "jan.": "january",
+    "january": "january",
 
-    " feb ": " february ",
-    " feb.": " february",
-    " february ": " february ",
+    "feb": "february",
+    "feb.": "february",
+    "february": "february",
 
-    " mar ": " march ",
-    " mar.": " march",
-    " march ": " march ",
+    "mar": "march",
+    "mar.": " march",
+    "march": " march",
 
-    " apr ": " april ",
-    " apr.": " april",
-    " april ": " april ",
+    "apr": "april",
+    "apr.": " april",
+    "april": " april",
 
-    " jun ": " june ",
-    " jun.": " june",
-    " june ": " june ",
+    "jun": "june",
+    "jun.": "june",
+    "june": "june",
 
-    " jul ": " july ",
-    " jul.": " july",
-    " july ": " july ",
+    "jul ": " july",
+    "jul.": " july",
+    "july ": " july ",
 
-    " aug ": " august ",
-    " aug.": " august",
-    " august ": " august ",
+    "aug ": " august",
+    "aug.": " august",
+    "august ": " august",
 
-    " sep ": " september ",
-    " sept ": " september ",
-    " sep.": " september",
-    " september ": " september ",
+    "sep": " september",
+    "sept": " september",
+    "sep.": " september",
+    "september ": " september",
 
-    " oct ": " october ",
-    " oct.": " october",
-    " october ": " october ",
+    "oct": "october",
+    "oct.": "october",
+    "october": "october",
 
-    " nov ": " november ",
-    " nov.": " november",
-    " november ": " november ",
+    "nov": "november",
+    "nov.": "november",
+    "november": "november",
 
-    " dec ": " december ",
-    " dec.": " december",
-    " december ": " december ",
+    "dec": "december",
+    "dec.": "december",
+    "december": "december",
 }
 
 CANONICAL_INTENTS = {
@@ -222,6 +222,9 @@ MONTHLY_SCHEDULE = [
 ]
 
 GLOBAL_NORMALIZATION_MAP = {
+
+    **MONTH_NORMALIZATION_MAP,
+
     # Abhishekam spellings
     "abisekam": "abhishekam",
     "abisegam": "abhishekam",
