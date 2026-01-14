@@ -1,0 +1,196 @@
+Abhishekam
+Available for any deity worshipped at the temple (Venkateswara, Shiva, Ganapathi, Hanuman, Sai Baba, Mahalakshmi, Andal)
+Pricing: $151 temple, $251 home (Individual) | $51 (Saamoohika)
+See: Abhishekam.txt for items required
+
+Archana
+Name recitation with deity's 16/108 names
+Available for any deity worshipped at the temple
+Pricing: $21 (basic), $116 (Sahasranaama 1008 names)
+
+Kalyanotsavam
+Divine wedding ceremony of deities
+Pricing: $251 temple, $501 home (Individual) | $151 (Saamoohika)
+
+Satyanarayana Swamy Vratham
+Lord Vishnu worship with five sacred stories
+When: Every Purnima at 6:30 PM
+Pricing: $151 temple, $201 home (Individual) | $116 (Saamoohika)
+See: Satyanarayana-Swamy-Pooja-at-Temple.txt
+
+Sahasranaama Archana
+Recitation of 1008 names of deity
+Pricing: $116
+
+═══════════════════════════════════════════════════════════
+
+BIRTH & CHILDHOOD CEREMONIES:
+
+Punyahavachanam
+Sanctification ceremony for newborn (performed at home only)
+When: Within 10-12 days of birth
+Pricing: $201
+
+Naamakaranam
+Naming ceremony for baby
+When: 11th, 21st, or 101st day after birth
+Pricing: $116 temple, $201 home (if Punyahavachanam already done)
+Combined with Punyahavachanam: $251 home
+See: Namakaranam.txt
+
+Anna Prasana
+First solid food ceremony
+When: 6-8 months after birth
+Pricing: $101 temple, $201 home
+See: Annaprasana.txt
+
+First Year Birthday (Ashtottaram)
+Completion of first year celebration with 108 names archana
+Pricing: $51
+
+Hair Offering
+First haircut ceremony
+When: Age 1-3 years
+Pricing: $101 temple, $151 home
+See: Hair-Offering.txt
+
+Aksharaabhyasam
+Beginning of education ceremony (child's first writing)
+When: Age 3-5 years
+Pricing: $101 temple, $201 home
+See: Akshrabhyasam.txt
+
+═══════════════════════════════════════════════════════════
+
+LIFE MILESTONE CEREMONIES:
+
+Seemantham
+Baby shower ceremony for pregnant women
+When: 5th, 7th, or 9th month of pregnancy
+Pricing: $151 temple, $201 home | With Homam: $201 temple, $351 home
+See: Seemantham.txt
+
+Nischitartham
+Engagement ceremony
+Pricing: $251 temple, $351 home
+See: Nischithartham.txt
+
+Vivaham (Hindu Wedding)
+Traditional Hindu wedding ceremony
+Pricing: $501 temple, $601 home
+Advance booking required (1-2 months)
+See: Hindu-Wedding-Ceremony.txt
+
+Shashti Poorthi (60th Birthday)
+60th birthday celebration
+Pricing: $351 temple, $451 home
+
+Bheema Ratha Santhi (70th Birthday)
+70th birthday celebration
+Contact temple for pricing
+
+═══════════════════════════════════════════════════════════
+
+HOME & PROPERTY CEREMONIES:
+
+Shanku Sthaapana (Bhoomi Pooja)
+Land blessing before construction
+Pricing: $201
+See: Bhoomi_pooja.txt
+
+Gruhapravesam with Vaastu Pooja
+Housewarming ceremony
+Options:
+• Basic with Vaastu Pooja: $251
+• With Homam OR Satyanarayana Vratham: $351
+• With Homam AND Satyanarayana Vratham: $401
+See: GruhapravesamAndVastuPooja.txt
+
+Vahana / Car Pooja
+Vehicle blessing (Archana included)
+Pricing: $51 or $201 (different service levels)
+
+═══════════════════════════════════════════════════════════
+
+HOMAMS (FIRE CEREMONIES):
+
+Available Homam Types:
+• Sudarsana (Protection)
+• Lakshmi (Wealth)
+• Venkateswara (Overall wellbeing)
+• Ganapati (Obstacle removal)
+• Nava Graha (9 planets)
+• Lakshmi Hayagriva (Knowledge + wealth)
+• Lakshmi Narasimha (Protection)
+• Dhanvantari (Health)
+• Saraswati (Knowledge)
+• Durga (Overcoming enemies)
+• Rudra (Shiva worship)
+• Mrutyunjaya (Victory over death)
+
+Pricing: $151 temple, $251 home (Individual homams)
+See: Any_Homam.txt
+
+Ayush Homam and Ayush Pooja
+Longevity and health homam
+Pricing: $151 temple, $201 home
+
+═══════════════════════════════════════════════════════════
+
+PLANETARY WORSHIP:
+
+Eka Graha Pooja (Single Planet)
+One specific planet worship
+Pricing: $31 per planet
+
+Nava Graha Pooja (9 Planets)
+All nine planets worship
+Pricing: $116
+See: Nava-Graha-Pooja.txt
+
+Sani Graha Pooja (Thailaabhishekam)
+Saturn appeasement with oil bath
+When: Saturdays, Trayodasi
+Pricing: $51
+
+═══════════════════════════════════════════════════════════
+
+ANCESTOR WORSHIP:
+
+Hiranya Srardham
+Simplified ancestor worship (Pinda Shradham)
+When: Amavasya, death anniversaries, Pitru Paksha
+Pricing: $101 temple, $151 home
+See: Hiranya-Sharddham.txt
+
+Pinda Srardham
+Traditional ancestor worship
+More elaborate than Hiranya Srardham
+
+═══════════════════════════════════════════════════════════
+
+SPECIAL SERVICES:
+
+Hanuman Vada Mala
+108 traditional vadas (fritters) prepared and offered to Hanuman
+REQUIRES: Minimum 7 days advance notice
+Pricing: $151
+Best Days: Saturdays, Tuesdays
+
+═══════════════════════════════════════════════════════════
+
+BOOKING PROCESS
+
+STEP 1: Choose the service you need from list above
+STEP 2: Check arjitha_seva.txt for exact pricing
+STEP 3: Check ItemsRequired folder for items to bring
+STEP 4: Contact temple to book date/time
+STEP 5: Bring required items on ceremony day
+STEP 6: Attend ceremony and receive prasadam
+
+ADVANCE NOTICE NEEDED:
+Regular services: 1-3 days
+Life ceremonies: 2-4 weeks
+Weddings: 1-2 months
+Hanuman Vada Mala: Minimum 7 days
+
