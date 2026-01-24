@@ -5,6 +5,9 @@ from zoneinfo import ZoneInfo
 from backend.ask_temple import answer_user
 import re
 import boto3
+import logging,hashlib
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 # --- ENV ---
 VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "svt-verify-123")
@@ -14,7 +17,7 @@ PHONE_ID     = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
 # --- DYNAMODB TABLES (NEW) ---
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 subscribers_table = dynamodb.Table('temple-subscribers')
-events_table = dynamodb.Table('temple-events')
+
 
 
 # ---------------------------------------------------------
@@ -72,6 +75,78 @@ def send_whatsapp_image(to, image_url, caption=""):
 
 
 # ---------------------------------------------------------
+# SEND WHATSAPP QUICK BUTTONS (INTERACTIVE)
+# ---------------------------------------------------------
+def send_quick_buttons(to, body_text="Choose an option:"):
+    """
+    Sends a WhatsApp Interactive Button message (Quick Reply buttons).
+    Buttons appear under that single message (not permanent UI).
+    """
+    url = f"https://graph.facebook.com/v22.0/{PHONE_ID}/messages"
+
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "body": {"text": body_text[:1024]},
+            "action": {
+                "buttons": [
+                    {"type": "reply", "reply": {"id": "BTN_HOURS", "title": "⏰Temple Hours"}},
+                    {"type": "reply", "reply": {"id": "BTN_EVENTS_TODAY", "title": "📅Events Today"}},
+                ]
+            },
+        },
+    }
+
+    req = urllib.request.Request(url, json.dumps(payload).encode(), method="POST")
+    req.add_header("Authorization", f"Bearer {TOKEN}")
+    req.add_header("Content-Type", "application/json")
+
+    try:
+        urllib.request.urlopen(req, timeout=10)
+        return True
+    except Exception as e:
+        print("Send buttons error:", e)
+        return False
+
+# ---------------------------------------------------------
+# SEND WHATSAPP QUICK BUTTONS (INTERACTIVE)
+# ---------------------------------------------------------
+def send_subscribe_button(to, body_text="Choose an option:"):
+    """
+    Sends a WhatsApp Interactive Button message (Quick Reply buttons).
+    Buttons appear under that single message (not permanent UI).
+    """
+    url = f"https://graph.facebook.com/v22.0/{PHONE_ID}/messages"
+
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "body": {"text": body_text[:1024]},
+            "action": {
+                "buttons": [
+                    {"type": "reply", "reply": {"id": "BTN_SUBSCRIBE", "title": "🔔Subscribe"}},
+                    ]
+            },
+        },
+    }
+
+    req = urllib.request.Request(url, json.dumps(payload).encode(), method="POST")
+    req.add_header("Authorization", f"Bearer {TOKEN}")
+    req.add_header("Content-Type", "application/json")
+
+    try:
+        urllib.request.urlopen(req, timeout=10)
+        return True
+    except Exception as e:
+        print("Send buttons error:", e)
+        return False
+# ---------------------------------------------------------
 # SUBSCRIPTION MANAGEMENT (NEW)
 # ---------------------------------------------------------
 def subscribe_user(phone_number):
@@ -121,190 +196,6 @@ def check_subscription(phone_number):
         print(f"❌ Error checking subscription: {e}")
         return False
 
-
-# ---------------------------------------------------------
-# DAILY BROADCAST SCRAPER (NEW)
-# ---------------------------------------------------------
-def scrape_and_broadcast():
-    """
-    Daily function: Scrape temple website and broadcast events
-    Called by EventBridge at 9 AM
-    """
-    print("\n🕉️ STARTING DAILY EVENT BROADCAST")
-    print("="*60)
-    
-    import requests
-    from bs4 import BeautifulSoup
-    from urllib.parse import urljoin
-    import hashlib
-    import time
-    
-    BASE_URL = "https://svtempleco.org"
-    HOME_URL = f"{BASE_URL}/Home"
-    
-    HEADERS = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Connection': 'keep-alive',
-        'Referer': 'https://svtempleco.org/'
-    }
-    
-    EVENT_DATES = {
-        'vaikuntaekadasi': 'December 30, 2025 (Tuesday)',
-        'vaikunta ekadasi': 'December 30, 2025 (Tuesday)',
-        'balavihar': 'January 2025 (Check with temple)',
-        'melchat': 'January 2025 (Check with temple)'
-    }
-    
-    # Get all active subscribers
-    try:
-        response = subscribers_table.scan(
-            FilterExpression='subscribed = :val',
-            ExpressionAttributeValues={':val': True}
-        )
-        subscribers = [item['phone_number'] for item in response.get('Items', [])]
-        
-        # Handle pagination
-        while 'LastEvaluatedKey' in response:
-            response = subscribers_table.scan(
-                FilterExpression='subscribed = :val',
-                ExpressionAttributeValues={':val': True},
-                ExclusiveStartKey=response['LastEvaluatedKey']
-            )
-            subscribers.extend([item['phone_number'] for item in response.get('Items', [])])
-        
-        print(f"📱 Found {len(subscribers)} active subscribers")
-        
-        if not subscribers:
-            print("⚠️ No subscribers found")
-            return 0
-            
-    except Exception as e:
-        print(f"❌ Error getting subscribers: {e}")
-        return 0
-    
-    # Scrape website
-    try:
-        print("🔍 Scraping temple website...")
-        session = requests.Session()
-        session.headers.update(HEADERS)
-        
-        response = session.get(HOME_URL, timeout=30, allow_redirects=True)
-        response.raise_for_status()
-        
-        soup = BeautifulSoup(response.content, 'html.parser')
-        events = []
-        
-        event_imgs = soup.select("img[src]")
-                
-        for img in event_imgs:
-            src = img.get('src', '')
-            if any(year in src.lower() for year in ['2025', '2026']):
-                if src.startswith('../'):
-                    img_url = urljoin(BASE_URL, src.replace('../', ''))
-                elif src.startswith('/'):
-                    img_url = BASE_URL + src
-                else:
-                    img_url = urljoin(HOME_URL, src)
-                
-                filename = src.split('/')[-1]
-                event_name = filename.replace('.jpg', '').replace('.jpeg', '').replace('.png', '')
-                event_name = event_name.replace('_', ' ').replace('2025', '').replace('2026', '').strip().title()
-                
-                events.append({
-                    'filename': filename,
-                    'name': event_name,
-                    'image_url': img_url
-                })
-        
-        print(f"✅ Found {len(events)} upcoming events")
-        
-    except Exception as e:
-        print(f"❌ Scraping error: {e}")
-        return 0
-    
-    if not events:
-        print("ℹ️ No events to broadcast")
-        return 0
-    
-    # Broadcast to subscribers
-    events_posted = 0
-    first_event = True
-    
-    for idx, event in enumerate(events):
-        # Check if already posted
-        dedupe_key = f"{event['filename']}|{event['image_url']}|{event['name']}"
-        event_hash = hashlib.md5(dedupe_key.encode()).hexdigest()
-
-        
-        try:
-            response = events_table.get_item(Key={'event_hash': event_hash})
-            if 'Item' in response:
-                print(f"⏭️ Skipping '{event['name']}' (already posted)")
-                continue
-        except:
-            pass
-        
-        # Get event date
-        event_lower = event['name'].lower()
-        event_date = "Date TBD (Contact temple: 303-898-5514)"
-        for key, date in EVENT_DATES.items():
-            if key in event_lower:
-                event_date = date
-                break
-        
-        # Format message
-        if first_event:
-            message = f"""UPCOMING EVENTS
-
-📅 {event['name']}
-{event_date}"""
-            first_event = False
-        else:
-            message = f"""📅 {event['name']}
-{event_date}"""
-        
-        print(f"\n📢 Broadcasting: {event['name']}")
-        
-        # Send to all subscribers
-        success_count = 0
-        for phone in subscribers:
-            if send_whatsapp_image(phone, event['image_url'], message):
-                success_count += 1
-            time.sleep(0.5)
-        
-        if success_count > 0:
-            # Mark as posted
-            try:
-                events_table.put_item(
-                    Item={
-                        'event_hash': event_hash,
-                        'event_data': json.dumps(event),
-                        'timestamp': datetime.now().isoformat(),
-                        'ttl': int(datetime.now().timestamp()) + (90 * 24 * 60 * 60)
-                    }
-                )
-            except Exception as e:
-                print(f"⚠️ Error marking as posted: {e}")
-            
-            events_posted += 1
-            print(f"✅ Sent to {success_count}/{len(subscribers)} subscribers")
-    
-    # Send final welcome message
-    if events_posted > 0:
-        print("\n📢 Sending final welcome message...")
-        welcome_msg = """All are Welcome.
-Om Namo Venkateshaya 🕉️"""
-        
-        for phone in subscribers:
-            send_reply(phone, welcome_msg)
-            time.sleep(0.5)
-    
-    print(f"\n✅ BROADCAST COMPLETE: {events_posted} events posted")
-    return events_posted
-
-
 # ---------------------------------------------------------
 # SIMPLE BULLET DEDUPE (EXISTING - NO CHANGES)
 # ---------------------------------------------------------
@@ -318,173 +209,230 @@ def dedupe_bullets(text: str) -> str:
             out.append(clean)
     return "\n".join(out)
 
+# ---------------------------------------------------------
+# EXTRACT USER MESSAGE TEXT (TEXT + BUTTON REPLIES)
+# ---------------------------------------------------------
+def extract_user_message(msg: dict) -> str | None:
+    """
+    Supports:
+    - Normal text messages
+    - Interactive button replies
+    """
+    # Normal text
+    if msg.get("type") == "text" and "text" in msg:
+        return msg["text"]["body"].strip()
 
+    # Interactive button click
+    if msg.get("type") == "interactive":
+        interactive = msg.get("interactive", {})
+        if interactive.get("type") == "button_reply":
+            btn = interactive.get("button_reply", {})
+            # Prefer ID (stable), fallback to title
+            return (btn.get("id") or btn.get("title") or "").strip()
+
+    return None
+
+
+# ---------------------------------------------------------
+# MAP BUTTON IDs TO REAL QUERIES
+# ---------------------------------------------------------
+BUTTON_MAP = {
+    "BTN_SUBSCRIBE": "subscribe",
+    "BTN_HOURS": "temple hours",
+    "BTN_EVENTS_TODAY": "events today",
+}
 # ---------------------------------------------------------
 # MAIN HANDLER (UPDATED - Added EventBridge + Subscriptions)
 # ---------------------------------------------------------
 def handler(event, context):
 
-    # -------------------------------------------------------
-    # DAILY BROADCAST TRIGGER (NEW)
-    # -------------------------------------------------------
-    if event.get("source") == "aws.events":
-        print("🔔 Triggered by EventBridge - Running daily broadcast")
-        events_posted = scrape_and_broadcast()
-        return {
-            'statusCode': 200,
-            'body': json.dumps({
-                'message': 'Daily broadcast completed',
-                'events_posted': events_posted,
-                'timestamp': datetime.now().isoformat()
-            })
-        }
-
-    # --- VALIDATION CALLBACK (EXISTING - NO CHANGES) ---
+    # --- VALIDATION CALLBACK (GET) ---
     if event.get("httpMethod") == "GET":
-        qs = event.get("queryStringParameters", {})
+        qs = event.get("queryStringParameters", {}) or {}
         if qs.get("hub.mode") == "subscribe" and qs.get("hub.verify_token") == VERIFY_TOKEN:
             return {"statusCode": 200, "body": qs.get("hub.challenge")}
         return {"statusCode": 403}
 
-    # --- PARSE INCOMING MESSAGE (EXISTING - NO CHANGES) ---
-    body = json.loads(event.get("body", "{}"))
+    # --- POST ---
+    try:
+        body = json.loads(event.get("body", "{}") or "{}")
+    except Exception:
+        return {"statusCode": 200}
 
     for entry in body.get("entry", []):
         for change in entry.get("changes", []):
-            msg = change.get("value", {}).get("messages", [{}])[0]
-            if "text" not in msg:
+            messages = change.get("value", {}).get("messages", [])
+            if not messages:
                 continue
 
-            user_text = msg["text"]["body"].strip()
-            lower = user_text.lower()
-            sender = msg["from"]
+            for msg in messages:
+                sender = msg.get("from")
+                if not sender:
+                    continue
 
-            # -------------------------------------------------
-            # SUBSCRIPTION COMMANDS (NEW)
-            # -------------------------------------------------
-            if lower in ["subscribe", "start", "join", "notifications"]:
-                success = subscribe_user(sender)
-                if success:
-                    send_reply(
-                        sender,
-                        "✅ Subscribed Successfully!\n\n"
-                        "You will receive notifications about upcoming temple events.\n\n"
-                        "📅 Daily event updates at 9 AM\n"
-                        "🕉️ Special festival announcements\n\n"
-                        "Commands:\n"
-                        "• unsubscribe - Stop notifications\n"
-                        "• status - Check subscription\n\n"
-                        "Om Namo Venkateshaya 🕉️"
-                    )
-                else:
-                    send_reply(sender, "❌ Subscription failed. Please try again.")
-                return {"statusCode": 200}
-            
-            if lower in ["unsubscribe", "stop", "leave", "cancel"]:
-                success = unsubscribe_user(sender)
-                if success:
-                    send_reply(
-                        sender,
-                        "✅ Unsubscribed Successfully\n\n"
-                        "You will no longer receive event notifications.\n\n"
-                        "To subscribe again, send: subscribe\n\n"
-                        "Om Namo Venkateshaya 🕉️"
-                    )
-                else:
-                    send_reply(sender, "❌ Unsubscribe failed. Please try again.")
-                return {"statusCode": 200}
-            
-            if lower in ["status", "check", "subscription"]:
-                is_subscribed = check_subscription(sender)
-                if is_subscribed:
-                    send_reply(
-                        sender,
-                        "📊 Subscription Status: ✅ ACTIVE\n\n"
-                        "You are receiving event notifications.\n\n"
-                        "To unsubscribe, send: unsubscribe"
-                    )
-                else:
-                    send_reply(
-                        sender,
-                        "📊 Subscription Status: ❌ INACTIVE\n\n"
-                        "You are not receiving notifications.\n\n"
-                        "To subscribe, send: subscribe"
-                    )
-                return {"statusCode": 200}
+                user_text = extract_user_message(msg)
+                if not user_text:
+                    continue
 
-            # -------------------------------------------------
-            # THANK YOU RESPONSE (EXISTING - NO CHANGES)
-            # -------------------------------------------------
-            if re.search(r"\b(thanks|thank you|bye|goodbye)\b", lower):
-                send_reply(
-                    sender,
-                    "You're welcome! Blessings always.\n"
-                    "Om Namo Venkateshaya! Visit https://svtempleco.org/"
-                )
-                return {"statusCode": 200}
+                # If user clicked a button: ID -> command
+                user_text = BUTTON_MAP.get(user_text, user_text)
+                lower = user_text.lower().strip()
 
-            # -------------------------------------------------
-            # GREETING RESPONSE (EXISTING - NO CHANGES)
-            # -------------------------------------------------
-            greeting_words = ["hi", "hello", "hey", "namaste", "namaskar", "good morning", "good evening", "good afternoon", "namaskaram"]
-            
-            is_pure_greeting = False
-            
-            if lower in greeting_words:
-                is_pure_greeting = True
-            elif lower.startswith(("good morning", "good evening", "good afternoon")):
-                first_two_words = " ".join(lower.split()[:2])
-                if first_two_words in greeting_words:
+                # -------------------------------------------------
+                # QUICK SHORTCUT WORDS (events/hours/help/menu)
+                # -------------------------------------------------
+                if lower in ["help", "menu", "options", "start"]:
+                    send_reply(sender, "• Please choose an option below.")
+                    send_quick_buttons(sender, "Choose an option:")
+                    continue
+
+                if lower in ["events", "event", "schedule"]:
+                    user_text = "events today"
+                    lower = "events today"
+
+                if lower in ["hours", "timings", "timing", "time"]:
+                    user_text = "temple hours"
+                    lower = "temple hours"
+
+                # -------------------------------------------------
+                # SUBSCRIPTION COMMANDS
+                # -------------------------------------------------
+                if lower in ["subscribe", "join", "notifications"]:
+                    success = subscribe_user(sender)
+                    if success:
+                        send_reply(
+                            sender,
+                            "✅ Subscribed Successfully!\n\n"
+                            "You will receive notifications about upcoming temple events.\n\n"
+                            "📅 Daily event updates at 9 AM\n"
+                            "🕉️ Special festival announcements\n\n"
+                            "Commands:\n"
+                            "• unsubscribe - Stop notifications\n"
+                            "• status - Check subscription\n\n"
+                            "Om Namo Venkateshaya 🕉️"
+                        )
+                    else:
+                        send_reply(sender, "❌ Subscription failed. Please try again.")
+                    continue
+
+                if lower in ["unsubscribe", "stop", "leave", "cancel"]:
+                    success = unsubscribe_user(sender)
+                    if success:
+                        send_reply(
+                            sender,
+                            "✅ Unsubscribed Successfully\n\n"
+                            "You will no longer receive event notifications.\n\n"
+                            "To subscribe again, send: subscribe\n\n"
+                            "Om Namo Venkateshaya 🕉️"
+                        )
+                    else:
+                        send_reply(sender, "❌ Unsubscribe failed. Please try again.")
+                    continue
+
+                if lower in ["status", "check", "subscription"]:
+                    is_subscribed = check_subscription(sender)
+                    if is_subscribed:
+                        send_reply(
+                            sender,
+                            "📊 Subscription Status: ✅ ACTIVE\n\n"
+                            "You are receiving event notifications.\n\n"
+                            "To unsubscribe, send: unsubscribe"
+                        )
+                    else:
+                        send_reply(
+                            sender,
+                            "📊 Subscription Status: ❌ INACTIVE\n\n"
+                            "You are not receiving notifications.\n\n"
+                            "To subscribe, send: subscribe"
+                        )
+                    continue
+
+                # -------------------------------------------------
+                # THANK YOU RESPONSE
+                # -------------------------------------------------
+                if re.search(r"\b(thanks|thank you|bye|goodbye)\b", lower):
+                    send_reply(
+                        sender,
+                        "You're welcome! Blessings always.\n"
+                        "Om Namo Venkateshaya! Visit https://svtempleco.org/"
+                    )
+                    continue
+
+                # -------------------------------------------------
+                # GREETING RESPONSE
+                # -------------------------------------------------
+                greeting_words = [
+                    "hi", "hello", "hey", "namaste", "namaskar",
+                    "good morning", "good evening", "good afternoon", "namaskaram"
+                ]
+
+                is_pure_greeting = False
+                if lower in greeting_words:
                     is_pure_greeting = True
-            
-            if is_pure_greeting:
-                now = datetime.now(ZoneInfo("America/Denver"))
-                current_month = now.strftime("%B")
+                elif lower.startswith(("good morning", "good evening", "good afternoon")):
+                    first_two_words = " ".join(lower.split()[:2])
+                    if first_two_words in greeting_words:
+                        is_pure_greeting = True
 
-                greeting = f"""🕉️ SV Temple Castle Rock, Colorado
+                if is_pure_greeting:
+                    now = datetime.now(ZoneInfo("America/Denver"))
+                    current_month = now.strftime("%B")
+
+                    greeting = f"""🕉️ SV Temple Castle Rock, Colorado
 {now:%A, %B %d, %Y} | {now:%I:%M %p %Z}
 ────────────────────────
 🙏 Namaste! Welcome to Sri Venkateswara Temple!
 📍 Location: 1495 South Ridge Road, Castle Rock, CO 80104
 📞 Manager: 303-898-5514 | Phone: 303-660-9555 🌐 www.svtempleco.org
-⏰ TEMPLE HOURS:Weekdays: 9 AM-12 PM, 6PM-8 PM,Weekends/Holidays: 9 AM-8 PM, 
+⏰ TEMPLE HOURS: Weekdays: 9 AM-12 PM, 6 PM-8 PM | Weekends/Holidays: 9 AM-8 PM
 Cafeteria: Sat-Sun 12 PM-2 PM
 
 Type "subscribe" and send for notifications
 
 📅 SCHEDULES & PANCHANG:
-• Daily Pooja (Suprabhata Seva, Nitya Archana),{current_month} Events & Festivals
-• Satyanarayana Vratam Dates,Today's Panchang (Tithi/Nakshatra),Specific date panchang (e.g., "Dec 1 panchang")
+• Daily Pooja (Suprabhata Seva, Nitya Archana), {current_month} Events & Festivals
+• Satyanarayana Vratam Dates
+• Today's Panchang (Tithi/Nakshatra)
+• Specific date panchang (e.g., "Dec 1 panchang")
 
-🪔 ABHISHEKAM SCHEDULE:
-• 1st Week: Venkateswara (Sat), Siva (Sun)
-• 2nd Week: Kalyanam (Sat), Ganapati/Murugan (Sun)
-• 3rd Week: Andal (Fri), Mahalakshmi (Sat), Sai Baba (Sun)
-• 4th Week: Hanuman (Sat), Sudarshana Homam (Sun)
-
-🛕 ITEMS REQUIRED:Vahana Pooja (Vehicle Blessing), Satyanarayana Vratam,Abhishekam, Homam, Archana
-💰 Sponsorship:• Individual Pooja,Arjitha Seva details, Abhishekam & Homam costs,Vastram Samarpanam
-
-👥 TEMPLE LEADERSHIP:
-• Chairman: Saiganesh Rajamani (303-941-4166), President: Sri. Satyanarayana Velagapudi
-• Manager: Sri. Nandu Sankaran (303-898-5514)
-• Catering: Annapoorna Committee Chair: Smt. Swetha Sarvabhotla (537-462-6167)
-💬 EXAMPLE:"When is Hanuman Abhishekam?"
+💬 EXAMPLE: "When is Hanuman Abhishekam?"
 
 🕉️ Om Namo Venkateshaya! 🕉️
 """
-                send_reply(sender, greeting)
-                return {"statusCode": 200}
+                    send_reply(sender, greeting)
 
-            # -------------------------------------------------
-            # MAIN RAG + LLM PIPELINE (EXISTING - NO CHANGES)
-            # -------------------------------------------------
-            now = datetime.now(ZoneInfo("America/Denver"))
-            reply = answer_user(user_text, user_id=sender)
+                    # ✅ Show buttons right after greeting
 
-            # dedupe bullets just in case
-            reply = dedupe_bullets(reply)
 
-            send_reply(sender, reply)
+                    send_quick_buttons(sender, "Quick options:")
+                    if not check_subscription(sender):
+                        send_subscribe_button(sender, "Please subscribe:")
+
+                    continue
+
+                # ✅ Structured analytics log (1 line per query)
+                user_hash = hashlib.sha256(sender.encode()).hexdigest()[:10]  # avoids storing phone number directly
+
+                logger.info(json.dumps({
+                    "event": "query",
+                    "user": user_hash,
+                    "query": user_text,
+                    "query_lc": lower,
+                    "ts": datetime.now(ZoneInfo("America/Denver")).isoformat(),
+                    "channel": "whatsapp"
+                }))
+
+
+                # -------------------------------------------------
+                # MAIN RAG + LLM PIPELINE
+                # -------------------------------------------------
+                reply = answer_user(user_text, user_id=sender)
+                reply = dedupe_bullets(reply)
+
+                send_reply(sender, reply)
+
+                # ✅ Show buttons after answering
+                if not check_subscription(sender):
+                    send_subscribe_button(sender, "Please subscribe:")
 
     return {"statusCode": 200}

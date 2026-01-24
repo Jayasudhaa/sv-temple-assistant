@@ -13,7 +13,7 @@ from datetime import date, timedelta
 from typing import Optional, List
 import calendar
 import re
-
+ARJ_LINK = "https://svtempleco.org/Home/ArjithaSeva.html"
 # ===============================
 # AWS / External
 # ===============================
@@ -28,7 +28,7 @@ from backend.vahana_query import handle_vahana_pooja
 from backend.arjitha_seva_query import handle_arjitha_seva
 from backend.satyanarayana_query import handle_satyanarayana_pooja
 from backend.items_catalog_query import handle_items_required
-from backend.temple_info_query import handle_temple_hours
+from backend.temple_hours_query import handle_temple_hours
 from backend.temple_info_query import handle_vedic_recitation
 from backend.temple_info_query import handle_location
 from backend.temple_info_query import handle_contacts
@@ -45,6 +45,8 @@ from backend.constants import MONTHLY_SCHEDULE
 
 from backend.daily_pooja_query import handle_daily_pooja
 from backend.calender_2026 import CALENDAR_2026
+from backend.constants import ARJITHA_TRIGGER_KEYWORDS
+
 
 from backend.utility import (
     normalize_query,
@@ -468,8 +470,10 @@ def classify_intent(q: str) -> Intent:
     # 🧺 ITEMS / SAMAGRI (HIGH PRIORITY)
     # ==================================================
     if any(w in q for w in [
-        "item", "items", "samagri", "materials",
-        "bring", "required", "need"
+    "item", "items", "samagri", "materials",
+    "bring", "required", "need"
+    ]) and not any(p in q for p in [
+        "need priest", "need priests", "priest", "priests"
     ]):
         return Intent.HOMAM_ITEMS
     
@@ -482,11 +486,11 @@ def classify_intent(q: str) -> Intent:
     # ==================================================
     # 📞 CONTACTS
     # ==================================================
-    if any(w in q for w in [
-        "chairman", "president", "manager", "temple manager",
-        "secretary", "treasurer",
-        "phone", "email", "contact"
-    ]):
+    if any(re.search(rf"\b{w}\b", q) for w in [
+    "chairman", "president", "manager", "temple manager",
+    "secretary", "treasurer",
+    "phone", "email", "contact"
+]):
         return Intent.CONTACTS
 
     # ==================================================
@@ -533,6 +537,19 @@ def classify_intent(q: str) -> Intent:
         ]):
             return Intent.PANCHANG_DATE
         return Intent.PANCHANG_TODAY
+    
+    # ==================================================
+    # 🪔 ARJITHA SEVA
+    # ==================================================
+    if any(k in q for k in ARJITHA_TRIGGER_KEYWORDS) and not (
+    "annadanam" in q and any(w in q for w in [
+        "sponsor", "sponsorship",
+        "donation", "amount",
+        "fee", "fees",
+        "cost", "price"
+    ])
+):
+        return Intent.ARJITHA_SEVA
 
     # ==================================================
     # 🍽️ FOOD / ANNADANAM
@@ -546,10 +563,34 @@ def classify_intent(q: str) -> Intent:
     # ==================================================
     # 🕰️ TEMPLE HOURS
     # ==================================================
-    if any(w in q for w in ["open", "close", "hours", "timing"]) \
-    and "satyanarayana" not in q \
-    and "satya narayana" not in q:
+    # ==================================================
+    # 🕰️ TEMPLE HOURS  ✅ weekend/weekday/day + "time" support
+    # ==================================================
+    if (
+        "satyanarayana" not in q
+        and "satya narayana" not in q
+        and (
+            # direct hour intent words
+            any(w in q for w in ["open", "close", "hours", "timing", "timings"])
+
+            # ✅ NEW: “weekend time”, “monday time”, “weekday time”
+            or (
+                "time" in q and any(d in q for d in [
+                    "weekday", "weekdays", "weekend", "weekends",
+                    "monday", "tuesday", "wednesday", "thursday", "friday",
+                    "saturday", "sunday", "holiday", "holidays"
+                ])
+            )
+
+            # ✅ NEW: “temple time”
+            or ("time" in q and "temple" in q)
+        )
+
+        # prevent “events / schedule” queries from being mistaken as hours
+        and not any(w in q for w in ["event", "events", "festival", "schedule", "program", "happening"])
+    ):
         return Intent.TEMPLE_HOURS
+
 
     # ==================================================
     # 📍 LOCATION
@@ -613,11 +654,7 @@ def classify_intent(q: str) -> Intent:
     if "suprabhata" in q or "daily pooja" in q:
         return Intent.DAILY_POOJA
 
-    # ==================================================
-    # 🪔 ARJITHA SEVA
-    # ==================================================
-    if "arjitha" in q:
-        return Intent.ARJITHA_SEVA
+    
 
     # ==================================================
     # 🤖 FALLBACK (RAG)
@@ -662,6 +699,7 @@ def answer_user(
     print("[DEBUG-NORM]", q)
 
     intent = classify_intent(q)   # ✅ FIRST classify
+
     if intent == Intent.EVENTS and not any(
     m.lower() in q for m in calendar.month_name if m
 ):
@@ -671,7 +709,7 @@ def answer_user(
 
     # ------------------ ESCALATION ------------------
     if set(q.split()) & {
-        "priest", "archaka", "pandit", "pujari","kanakabhishekam"
+        "kanakabhishekam"
     }:
         return finalize(
             "• Please contact the Temple office for assistance from the Priest or Temple Manager.",
@@ -688,15 +726,18 @@ def answer_user(
         "book pooja",
         "schedule pooja",
         "book puja",
-        "schedule puja",
+        "schedule home puja",
+        "schedule home pooja",
+        "how to arrange",
+        "book home puja",
+        "schedule home puja",
     ]):
         return finalize(
             "🪔 HOW TO BOOK A POOJA / SEVA\n\n"
             "• Decide the pooja or seva type\n"
             "• Choose temple or home service\n"
-            "• Contact the temple office to confirm date & priest availability\n"
-            "• Complete sponsorship/payment as applicable\n\n"
-            "📞 Temple office can assist with scheduling and guidance.",
+            "• 📞 Contact temple manager to confirm date & priest availability\n"
+            f"🔗 Official Arjitha Seva list: {ARJ_LINK}",
             q
         )
 
@@ -725,6 +766,11 @@ def answer_user(
             panchang = handle_panchang("panchang today", now)
             if panchang:
                 blocks.append(panchang)
+
+            # ✅ ALWAYS APPEND HOURS
+            hours = handle_temple_hours("temple hours", now)
+            if hours:
+                blocks.append(hours)
 
             if not is_weekend_day(now):
                 blocks.append(

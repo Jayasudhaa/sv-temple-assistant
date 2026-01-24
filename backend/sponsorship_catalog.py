@@ -68,21 +68,21 @@ SPONSORSHIP_CATALOG = {
         'annual_fee': None,
         'category': 'annadanam',
         'home_fee': None,
-        'name': 'AnnaDhanam (Pooled) Second Saturday of the month',
+        'name': 'Annadanam (Pooled) Second Saturday of the month',
         'temple_fee': 116
     },
     'annadanam_saturday_other': {
         'annual_fee': None,
         'category': 'annadanam',
         'home_fee': None,
-        'name': 'AnnaDhanam Saturday (except second ) of the month',
+        'name': 'Annadanam Saturday (except second ) of the month',
         'temple_fee': 1116
     },
     'annadanam_sunday': {
         'annual_fee': None,
         'category': 'annadanam',
         'home_fee': None,
-        'name': 'AnnaDhanam any Sunday of the month',
+        'name': 'Annadanam any Sunday of the month',
         'temple_fee': 516
     },
     'archana': {

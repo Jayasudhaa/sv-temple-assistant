@@ -103,9 +103,13 @@ TEMPLE_VOCAB = set(
 )
 
 def normalize_intent(q: str) -> str:
-    q = q.lower()
+    q = q.lower().strip()
 
-    # 1️⃣ Token-level normalization (tomo → tomorrow, scheduel → schedule)
+    # ✅ remove punctuation BUT keep apostrophe (so "what's" stays)
+    q = re.sub(r"[^\w\s']+", " ", q)
+    q = re.sub(r"\s+", " ", q).strip()
+
+    # 1️⃣ Token-level normalization
     words = q.split()
     words = [INTENT_NORMALIZATION.get(w, w) for w in words]
     q = " ".join(words)
@@ -119,23 +123,38 @@ def normalize_intent(q: str) -> str:
     return q
 
 
+
 def norm(q: str) -> str:
     return q.lower().strip()
 
 def normalize_query(q: str) -> str:
     q = q.lower().strip()
+    q = q.replace("’", "'")  # normalize apostrophe
+
     print("in normalize query", q)
+
+    # Add space after punctuation like sat.hours -> sat. hours
+    q = re.sub(r"([.,!?/])", r"\1 ", q)
 
     for k in sorted(GLOBAL_NORMALIZATION_MAP, key=len, reverse=True):
         v = GLOBAL_NORMALIZATION_MAP[k]
 
-        # word-boundary safe replacement
-        new_q = re.sub(rf"\b{k}\b", v, q)
+        # Strip accidental spaces inside your map keys/values
+        k_clean = k.strip()
+        v_clean = v.strip()
+
+        # ✅ Safe boundary: works for "sat.", "tue.", "jan.", etc.
+        pattern = rf"(?<!\w){re.escape(k_clean)}(?!\w)"
+
+        new_q = re.sub(pattern, v_clean, q)
         if new_q != q:
             q = new_q
-            print(f"mapped '{k}' → '{v}' => {q}")
+            print(f"mapped '{k_clean}' → '{v_clean}' => {q}")
 
+    # cleanup extra spaces
+    q = re.sub(r"\s+", " ", q).strip()
     return q
+
 
 
 
